@@ -176,6 +176,13 @@
   .msg-row.own .msg-hover-actions { right: auto; left: 4px; }
   .action-btn { background: none; border: none; cursor: pointer; font-size: 15px; padding: 2px 4px; border-radius: 5px; transition: background 0.1s; }
   .action-btn:hover { background: var(--border); }
+  .delete-btn {
+    background: none; border: none; cursor: pointer; font-size: 14px;
+    opacity: 0; transition: opacity 0.15s; padding: 2px 3px; flex-shrink: 0;
+    align-self: center; border-radius: 5px;
+  }
+  .msg-row:hover .delete-btn { opacity: 0.5; }
+  .delete-btn:hover { opacity: 1 !important; background: var(--surface2); }
 
   /* ── Task Card inline in Chat ── */
   .task-card-msg {
@@ -934,14 +941,16 @@ function buildMsgEl(msg, allMsgs) {
     <div class="msg-content">
       ${!isOwn?`<div class="msg-meta"><span class="msg-username">${msg.userName}</span><span>${fmtTime(msg.ts)}</span></div>`:''}
       ${replyHtml}
-      <div class="bubble ${isOwn?'own':'other'}">${md(msg.content)}${fileHtml}</div>
+      <div style="display:flex;align-items:flex-end;gap:5px;${isOwn?'flex-direction:row-reverse':''}">
+        <div class="bubble ${isOwn?'own':'other'}">${md(msg.content)}${fileHtml}</div>
+        ${isOwn?`<button class="delete-btn" onclick="deleteMsg('${msg.id}')" title="Löschen">🗑</button>`:''}
+      </div>
       <div class="reactions-row" id="reactions_${msg.id}">${renderReactions(msg)}</div>
       ${isOwn?`<div class="msg-meta" style="justify-content:flex-end"><span>${fmtTime(msg.ts)}</span></div>`:''}
     </div>
     <div class="msg-hover-actions">
       <div style="display:flex;gap:2px">${emojiBar}</div>
       <button class="action-btn" onclick="setReply('${msg.id}')">↩</button>
-      ${isOwn?`<button class="action-btn" onclick="deleteMsg('${msg.id}')" title="Löschen" style="color:var(--red)">🗑</button>`:''}
     </div>`;
   return div;
 }

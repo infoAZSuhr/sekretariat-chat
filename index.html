@@ -946,6 +946,9 @@ function handleFileSelect(e) {
 function onMessage(roomId, msg) {
   if(!messages[roomId]) messages[roomId]=[];
 
+  // Deduplicate — rewind + live subscribe can deliver same message twice
+  if (messages[roomId].some(m => m.id === msg.id)) return;
+
   // Register task in local lookup
   if(msg.isTask&&msg.taskData) tasks[msg.taskData.id]=msg.taskData;
 

@@ -80,7 +80,7 @@
   .workspace-name { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
   .ws-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 6px var(--accent); flex-shrink: 0; }
   .me-badge { display: flex; align-items: center; gap: 8px; background: var(--surface2); border-radius: 8px; padding: 7px 10px; }
-  .me-avatar { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .me-avatar { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; letter-spacing: -0.5px; color: #fff; flex-shrink: 0; }
   .me-name { font-size: 13px; font-weight: 600; flex: 1; }
   .me-online { width: 7px; height: 7px; background: var(--green); border-radius: 50%; flex-shrink: 0; }
 
@@ -562,7 +562,6 @@ const LOGO_URL   = 'data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1
 const CHANNEL_ID = 'sekretariat';
 const EMOJIS  = ['👍','❤️','😂','😮','🎉','🔥','','😢'];
 const COLORS  = ['#4f46e5','#7c3aed','#db2777','#dc2626','#d97706','#059669','#0891b2','#9333ea'];
-const AVATARS = ['🦊','🐺','🦁','🐯','🦋','🦉','🐸','🦄','🐙','🦈','🦚','🦜'];
 
 // --- State --------------------------------------------------------------------
 let ably, me, presenceChannel;
@@ -705,15 +704,16 @@ function joinChat() {
   document.getElementById('join-btn').textContent='Verbinde…';
 
   const savedId = localStorage.getItem('tc_uid');
+  const initials = name.trim().split(/\s+/).map(w=>w[0].toUpperCase()).slice(0,2).join('');
   me = {
     id: savedId||genId(), name,
     color: COLORS[Math.floor(Math.random()*COLORS.length)],
-    avatar: AVATARS[Math.floor(Math.random()*AVATARS.length)]
+    avatar: initials
   };
-  // Restore color/avatar if we have them
-  try { const s=JSON.parse(localStorage.getItem('tc_me')||'{}'); if(s.color){me.color=s.color;me.avatar=s.avatar;} } catch(e){}
+  // Restore color if we have it (avatar = initials from current name, not saved)
+  try { const s=JSON.parse(localStorage.getItem('tc_me')||'{}'); if(s.color) me.color=s.color; } catch(e){}
   localStorage.setItem('tc_uid', me.id);
-  localStorage.setItem('tc_me', JSON.stringify(me));
+  localStorage.setItem('tc_me', JSON.stringify({color: me.color}));
 
   ably = new Ably.Realtime({ key, clientId: me.id });
   ably.connection.on('connected', onConnected);
@@ -842,7 +842,7 @@ function renderSidebar() {
     const nameStyle = isAbsent ? 'color:var(--text3)' : '';
     const absentLabel = isAbsent ? `<span style="font-size:10px;color:var(--text3);margin-left:2px">abwesend</span>` : '';
     return `<div class="sidebar-item" style="cursor:default;${isAbsent?'opacity:0.6':''}">
-        <span style="width:20px;height:20px;border-radius:5px;background:${u.color};display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">${u.avatar}</span>
+        <span style="width:20px;height:20px;border-radius:5px;background:${u.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${u.avatar}</span>
         <span class="item-name" style="${nameStyle}">${u.name}${absentLabel}</span>
         ${dot}
       </div>`;
@@ -855,7 +855,7 @@ function renderSidebar() {
   document.getElementById('dm-list').innerHTML = Object.values(dmRooms).map(dm=>{
     const u=dm.otherUser; const unr=unread[dm.id]||0;
     return `<div class="sidebar-item ${activeRoom===dm.id?'active':''}" onclick="selectDm('${dm.id}',JSON.parse(this.dataset.u))" data-u='${JSON.stringify(u)}'>
-      <span style="width:20px;height:20px;border-radius:5px;background:${u.color};display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">${u.avatar}</span>
+      <span style="width:20px;height:20px;border-radius:5px;background:${u.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${u.avatar}</span>
       <span class="item-name">${u.name}</span>
       <span class="udot" style="background:${members[u.id]?.online?'var(--green)':'var(--text3)'}"></span>
       ${unr>0?`<span class="unread-badge">${unr}</span>`:''}

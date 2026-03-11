@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>TeamChat – Sekretariat</title>
+<title>AZS Intern</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
 <style>
@@ -414,7 +414,7 @@
 <link rel="manifest" id="pwa-manifest">
 <meta name="theme-color" content="#0f1117">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Sekretariat">
+<meta name="apple-mobile-web-app-title" content="AZS Intern">
 <link rel="apple-touch-icon" id="apple-icon">
 </head>
 <body>
@@ -444,7 +444,7 @@
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
   <div class="sidebar" id="sidebar">
     <div class="sidebar-top">
-      <div class="workspace-name"><span class="ws-dot"></span>Sekretariat</div>
+      <div class="workspace-name"><span class="ws-dot"></span>AZS Intern</div>
       <div class="me-badge">
         <div class="me-avatar" id="me-avatar"></div>
         <div class="me-name" id="me-name-display"></div>
@@ -469,7 +469,7 @@
         <button class="hamburger" onclick="toggleSidebar()">☰</button>
         <span class="chat-header-icon" id="room-icon">🗂️</span>
         <div>
-          <div class="chat-header-title" id="room-title">Sekretariat</div>
+          <div class="chat-header-title" id="room-title">AZS Intern</div>
           <div class="chat-header-sub" id="room-sub">Interner Kanal</div>
         </div>
       </div>
@@ -490,8 +490,6 @@
         <button class="reply-close" onclick="clearReply()">✕</button>
       </div>
       <div class="input-box">
-        <input type="file" id="file-input" style="display:none" onchange="handleFileSelect(event)">
-        <button class="attach-btn" onclick="document.getElementById('file-input').click()">📎</button>
         <textarea class="msg-textarea" id="msg-input" placeholder="Nachricht an #Sekretariat…" rows="1"
           oninput="autoResize(this); onTyping()"
           onkeydown="handleKey(event)"></textarea>
@@ -664,6 +662,7 @@ function onConnected() {
   ch.subscribe('msg',         e=>onMessage('main',e.data));
   ch.subscribe('reaction',    e=>onReaction('main',e.data));
   ch.subscribe('task_update', e=>onTaskUpdate(e.data));
+  ch.subscribe('delete_msg',  e=>onDeleteMsg(e.data));
 
   // Typing on separate channel without rewind (old messages irrelevant)
   const chTyping = ably.channels.get(mainAblyId() + '_typing');
@@ -754,7 +753,7 @@ function addMember(u) { members[u.id]={...u,online:true}; }
 
 function renderSidebar() {
   const online = Object.values(members).filter(m=>m.online);
-  document.getElementById('online-count').textContent = online.length+1;
+  document.getElementById('online-count').textContent = online.length + 1; // +1 for self
 
   document.getElementById('members-list').innerHTML = online.length
     ? online.map(u=>`<div class="sidebar-item" style="cursor:default">
@@ -853,6 +852,23 @@ function onMessage(roomId, msg) {
   if(document.hidden && msg.userId!==me.id) showNotif(msg, roomId);
 }
 
+function deleteMsg(msgId) {
+  const msgs = messages['main'] || [];
+  const msg = msgs.find(m => m.id === msgId);
+  if (!msg || msg.userId !== me.id) return;
+  if (!confirm('Nachricht löschen?')) return;
+  ably.channels.get(mainAblyId()).publish('delete_msg', { msgId });
+}
+
+function onDeleteMsg({ msgId }) {
+  ['main'].forEach(room => {
+    if (messages[room]) {
+      messages[room] = messages[room].filter(m => m.id !== msgId);
+    }
+  });
+  if (activeRoom === 'main') renderMessages();
+}
+
 function renderMessages() {
   const el=document.getElementById('messages');
   const msgs=messages[activeRoom]||[];
@@ -925,6 +941,7 @@ function buildMsgEl(msg, allMsgs) {
     <div class="msg-hover-actions">
       <div style="display:flex;gap:2px">${emojiBar}</div>
       <button class="action-btn" onclick="setReply('${msg.id}')">↩</button>
+      ${isOwn?`<button class="action-btn" onclick="deleteMsg('${msg.id}')" title="Löschen" style="color:var(--red)">🗑</button>`:''}
     </div>`;
   return div;
 }
@@ -1232,8 +1249,8 @@ function setupPWA() {
 
   // Build manifest dynamically (needed because we're a local file)
   const manifest = {
-    name: 'Sekretariat Chat',
-    short_name: 'Sekretariat',
+    name: 'AZS Intern',
+    short_name: 'AZS Intern',
     description: 'Internes Kommunikations-Tool',
     start_url: location.href,
     display: 'standalone',
@@ -1259,6 +1276,14 @@ function setupPWA() {
 // --- Init ---------------------------------------------------------------------
 window.onload=()=>{
   setupPWA();
+  // Clean messages older than 24h every 10 minutes
+  setInterval(()=>{
+    const cutoff = Date.now() - 24*60*60*1000;
+    Object.keys(messages).forEach(room => {
+      messages[room] = (messages[room]||[]).filter(m => new Date(m.ts).getTime() > cutoff);
+    });
+    renderMessages();
+  }, 10*60*1000);
   // Hide API key field if key is hardcoded
   if (ABLY_KEY) {
     document.getElementById('key-section').style.display = 'none';

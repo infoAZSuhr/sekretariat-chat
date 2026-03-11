@@ -752,18 +752,30 @@ function onConnected() {
   presenceChannel.presence.subscribe('leave',  m=>{ if(members[m.clientId]) members[m.clientId].online=false; renderSidebar(); });
   presenceChannel.presence.subscribe('update', m=>{ addMember({id:m.clientId,...m.data}); renderSidebar(); });
 
-  presenceChannel.presence.enter({name:me.name,avatar:me.avatar,color:me.color}, ()=>{
-    syncPresence();
-    setTimeout(syncPresence, 1500);
-    setTimeout(syncPresence, 4000);
-    setInterval(syncPresence, 30000);
+  // Check for duplicate name before entering presence
+  presenceChannel.presence.get((err, existing) => {
+    if (!err && existing) {
+      const nameLower = me.name.toLowerCase();
+      const duplicate = existing.find(m => m.clientId !== me.id && m.data?.name?.toLowerCase() === nameLower);
+      if (duplicate) {
+        ably.close();
+        document.getElementById('join-btn').disabled = false;
+        document.getElementById('join-btn').textContent = 'Beitreten →';
+        toast('⚠️ "' + me.name + '" ist bereits online — bitte anderen Namen wählen');
+        return;
+      }
+    }
+    presenceChannel.presence.enter({name:me.name,avatar:me.avatar,color:me.color}, ()=>{
+      syncPresence();
+      setTimeout(syncPresence, 1500);
+      setTimeout(syncPresence, 4000);
+      setInterval(syncPresence, 30000);
+    });
   });
 
   // ── Ping system: broadcast own info + ask others to respond ──
-  // This ensures newly joined users see everyone, even with Presence delays
   ch.subscribe('ping', e => {
     if (e.data.id === me.id) return;
-    // Someone joined — add them and send back our own info
     addMember(e.data);
     renderSidebar();
     ch.publish('pong', {id:me.id, name:me.name, avatar:me.avatar, color:me.color});
@@ -774,16 +786,28 @@ function onConnected() {
     renderSidebar();
   });
 
-  // Heartbeat: broadcast presence every 5 minutes so others know we're still here
+  // Heartbeat every 30s — so others know we're alive
   setInterval(()=>{
     ch.publish('pong', {id:me.id, name:me.name, avatar:me.avatar, color:me.color});
-  }, 5*60*1000);
+  }, 30*1000);
+
+  // Watchdog: remove members not seen via Presence or heartbeat for >90s
+  setInterval(()=>{
+    const cutoff = Date.now() - 90*1000;
+    let changed = false;
+    Object.values(members).forEach(m => {
+      if (m.online && m.lastSeen && m.lastSeen < cutoff) {
+        m.online = false;
+        changed = true;
+      }
+    });
+    if (changed) renderSidebar();
+  }, 15*1000);
 
   // Announce ourselves after connecting
   setTimeout(()=>{
     ch.publish('ping', {id:me.id, name:me.name, avatar:me.avatar, color:me.color});
   }, 500);
-  // Re-announce after 3s in case someone missed it
   setTimeout(()=>{
     ch.publish('ping', {id:me.id, name:me.name, avatar:me.avatar, color:me.color});
   }, 3000);
@@ -1485,11 +1509,11 @@ function setupPWA() {
   const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
   document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
 
-  // Register service worker for offline support
-  if ('serviceWorker' in navigator) {
+  // Register service worker (only on real hosted URLs, not preview/local)
+  if ('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.includes('claudeusercontent')) {
     navigator.serviceWorker.register('/sw.js')
       .then(()=>console.log('SW registered'))
-      .catch(e=>console.log('SW skip (local file):', e.message));
+      .catch(e=>console.log('SW skip:', e.message));
   }
 }
 

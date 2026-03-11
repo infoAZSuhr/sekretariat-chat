@@ -10,33 +10,33 @@
 <script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
 <style>
   :root {
-    --bg: #0f1117;
-    --sidebar: #161b27;
-    --surface: #1c2333;
-    --surface2: #242d40;
-    --border: #2a3450;
+    --bg: #f0f2f5;
+    --sidebar: #ffffff;
+    --surface: #ffffff;
+    --surface2: #e8eaed;
+    --border: #d1d5db;
     --accent: #3b82f6;
-    --accent2: #60a5fa;
-    --accent-glow: rgba(59,130,246,0.15);
-    --text: #e2e8f0;
-    --text2: #8899aa;
-    --text3: #4a5568;
-    --green: #22c55e;
-    --yellow: #f59e0b;
-    --red: #ef4444;
-    --task-ok: #10b981;
+    --accent2: #2563eb;
+    --accent-glow: rgba(59,130,246,0.12);
+    --text: #111827;
+    --text2: #6b7280;
+    --text3: #9ca3af;
+    --green: #16a34a;
+    --yellow: #d97706;
+    --red: #dc2626;
+    --task-ok: #059669;
     --font: 'DM Sans', sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb { background: #c1c5cc; border-radius: 4px; }
 
   /* ── Setup ── */
   #setup-screen {
     display: flex; align-items: center; justify-content: center; height: 100vh;
-    background: radial-gradient(ellipse at 30% 50%, rgba(59,130,246,0.08) 0%, transparent 60%), var(--bg);
+    background: radial-gradient(ellipse at 30% 50%, rgba(59,130,246,0.06) 0%, transparent 60%), var(--bg);
   }
   .setup-card {
     background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
@@ -142,7 +142,7 @@
 
   .reply-preview {
     border-left: 2px solid var(--accent); padding: 4px 10px;
-    background: var(--surface); border-radius: 0 6px 6px 0;
+    background: #e8f0fe; border-radius: 0 6px 6px 0;
     font-size: 11px; color: var(--text2); margin-bottom: 4px;
     max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
@@ -296,8 +296,9 @@
   .reply-close { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 14px; }
   .input-box {
     display: flex; align-items: flex-end; gap: 8px;
-    background: var(--surface); border: 1.5px solid var(--border);
+    background: #ffffff; border: 1.5px solid var(--border);
     border-radius: 13px; padding: 6px 6px 6px 14px; transition: border-color 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
   .input-box:focus-within { border-color: rgba(59,130,246,0.4); box-shadow: 0 0 0 3px var(--accent-glow); }
   .msg-textarea { flex: 1; background: none; border: none; color: var(--text); font-family: var(--font); font-size: 14px; resize: none; outline: none; max-height: 120px; line-height: 1.5; padding: 4px 0; }
@@ -449,7 +450,7 @@
   }
 </style>
 <link rel="manifest" id="pwa-manifest">
-<meta name="theme-color" content="#0f1117">
+<meta name="theme-color" content="#f0f2f5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="AZS Intern">
 <link rel="apple-touch-icon" id="apple-icon">
@@ -1530,8 +1531,8 @@ function setupPWA() {
     description: 'Internes Kommunikations-Tool',
     start_url: location.href,
     display: 'standalone',
-    background_color: '#0f1117',
-    theme_color: '#0f1117',
+    background_color: '#f0f2f5',
+    theme_color: '#f0f2f5',
     orientation: 'portrait-primary',
     icons: [
       { src: iconUrl, sizes: '192x192', type: 'image/png' },

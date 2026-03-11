@@ -786,14 +786,14 @@ function onConnected() {
     renderSidebar();
   });
 
-  // Heartbeat every 30s — so others know we're alive
+  // Heartbeat every 10s — so others know we're alive
   setInterval(()=>{
     ch.publish('pong', {id:me.id, name:me.name, avatar:me.avatar, color:me.color});
-  }, 30*1000);
+  }, 10*1000);
 
-  // Watchdog: remove members not seen via Presence or heartbeat for >90s
+  // Watchdog: remove members not seen for >30s, checks every 10s
   setInterval(()=>{
-    const cutoff = Date.now() - 90*1000;
+    const cutoff = Date.now() - 30*1000;
     let changed = false;
     Object.values(members).forEach(m => {
       if (m.online && m.lastSeen && m.lastSeen < cutoff) {
@@ -802,7 +802,7 @@ function onConnected() {
       }
     });
     if (changed) renderSidebar();
-  }, 15*1000);
+  }, 10*1000);
 
   // Announce ourselves after connecting
   setTimeout(()=>{

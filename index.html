@@ -554,7 +554,7 @@
 
 <script>
 // --- Config -------------------------------------------------------------------
-const ABLY_KEY   = '3JdMLQ.0kC3ow:ZT96FC2Vq7PwrpjE-E38hK5XT0wUU-ClHpog7Y4ZkGU';   // -> API-Key hier eintragen, dann nie mehr eingeben!
+const ABLY_KEY   = '';   // -> API-Key hier eintragen, dann nie mehr eingeben!
 const CHANNEL_ID = 'sekretariat';
 const EMOJIS  = ['👍','❤️','😂','😮','🎉','🔥','','😢'];
 const COLORS  = ['#4f46e5','#7c3aed','#db2777','#dc2626','#d97706','#059669','#0891b2','#9333ea'];
@@ -1093,12 +1093,62 @@ function doneTask(taskId) {
 }
 
 function onTaskUpdate(task) {
-  tasks[task.id]=task;
+  const prev = tasks[task.id];
+  tasks[task.id] = task;
   refreshTaskCard(task);
-  // Also update in messages array so re-renders are correct
-  const msgs=messages['main']||[];
-  const msgIdx=msgs.findIndex(m=>m.isTask&&m.taskData?.id===task.id);
-  if(msgIdx>=0) msgs[msgIdx].taskData=task;
+  // Update in messages array
+  const msgs = messages['main'] || [];
+  const msgIdx = msgs.findIndex(m => m.isTask && m.taskData?.id === task.id);
+  if (msgIdx >= 0) msgs[msgIdx].taskData = task;
+
+  // Notify creator when status changes
+  if (task.createdBy === me.id && prev && prev.status !== task.status) {
+    const shortTitle = task.title.length > 40 ? task.title.slice(0,40) + '…' : task.title;
+    if (task.status === 'confirmed') {
+      const fakeMsg = {
+        userId: 'system', userName: task.confirmedBy || 'Jemand',
+        color: '#059669', avatar: '✅',
+        content: '', isTask: false
+      };
+      playPing();
+      sendBrowserNotif(fakeMsg, 'Auftrag angenommen: ' + shortTitle);
+      showTaskNotif('✅ Angenommen', task.confirmedBy + ' hat deinen Auftrag angenommen', shortTitle);
+    } else if (task.status === 'done') {
+      const fakeMsg = {
+        userId: 'system', userName: task.doneBy || 'Jemand',
+        color: '#7c3aed', avatar: '☑️',
+        content: '', isTask: false
+      };
+      playPing();
+      sendBrowserNotif(fakeMsg, 'Auftrag erledigt: ' + shortTitle);
+      showTaskNotif('☑️ Erledigt', task.doneBy + ' hat den Auftrag erledigt', shortTitle);
+    }
+  }
+}
+
+function showTaskNotif(headline, byLine, title) {
+  const popup = document.createElement('div');
+  popup.className = 'notif-popup';
+  popup.innerHTML = `
+    <div class="notif-header">
+      <div class="notif-avatar" style="background:var(--accent);font-size:18px">${headline.split(' ')[0]}</div>
+      <div>
+        <div class="notif-name">${headline}</div>
+        <div class="notif-room">${byLine}</div>
+      </div>
+      <button class="notif-close" onclick="event.stopPropagation();dismissNotif(this.closest('.notif-popup'))">✕</button>
+    </div>
+    <div class="notif-text">${title}</div>`;
+  popup.addEventListener('click', () => { window.focus(); dismissNotif(popup); });
+  document.body.appendChild(popup);
+  const t = setTimeout(() => dismissNotif(popup), 7000);
+  popup._t = t;
+  // Flash title
+  clearInterval(flashInt);
+  const orig = document.title;
+  let tog = false;
+  flashInt = setInterval(() => { document.title = tog ? orig : (headline + ': ' + title.slice(0,20)); tog = !tog; }, 900);
+  window.addEventListener('focus', () => { clearInterval(flashInt); document.title = orig; }, { once: true });
 }
 
 // --- Task Modal ---------------------------------------------------------------

@@ -440,8 +440,11 @@
       <label class="setup-label">Ably API Key</label>
       <input class="setup-input" id="inp-key" placeholder="xxxxxx.xxxxxx:xxxxxxxxxxxxxxxxx" onkeydown="if(event.key==='Enter')joinChat()" />
       <div class="setup-hint">
-        Kostenlosen Account auf <a href="https://ably.com" target="_blank">ably.com</a> erstellen → Dashboard → API Keys → Key kopieren.<br>
-        <strong>Tipp:</strong> Key direkt in die Datei eintragen (Zeile mit <code>ABLY_KEY</code>) — dann nie mehr eingeben!
+        Einmalig eingeben — wird sicher auf diesem Gerät gespeichert.<br>
+        Beim nächsten Mal automatisch verwendet.
+      </div>
+      <div id="forget-key-wrap" style="display:none;margin-bottom:12px">
+        <button onclick="forgetKey()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:0;font-family:var(--font)">🗑 Gespeicherten Key löschen</button>
       </div>
     </div>
     <button class="setup-btn" id="join-btn" onclick="joinChat()">Beitreten →</button>
@@ -554,7 +557,7 @@
 
 <script>
 // --- Config -------------------------------------------------------------------
-const ABLY_KEY   = '';   // -> API-Key hier eintragen, dann nie mehr eingeben!
+const ABLY_KEY   = ''; // Legacy — key is now stored in localStorage
 const CHANNEL_ID = 'sekretariat';
 const EMOJIS  = ['👍','❤️','😂','😮','🎉','🔥','','😢'];
 const COLORS  = ['#4f46e5','#7c3aed','#db2777','#dc2626','#d97706','#059669','#0891b2','#9333ea'];
@@ -690,9 +693,13 @@ function dismissNotif(popup) {
 // --- Join ---------------------------------------------------------------------
 function joinChat() {
   const name = document.getElementById('inp-name').value.trim();
-  const key  = ABLY_KEY || document.getElementById('inp-key').value.trim();
+  const key  = ABLY_KEY || document.getElementById('inp-key').value.trim() || localStorage.getItem('tc_apikey') || '';
   if (!name) return toast('Bitte deinen Namen eingeben');
   if (!key)  return toast('Bitte den API-Key eingeben');
+  // Save key securely in localStorage — never in source code
+  if (!ABLY_KEY && document.getElementById('inp-key').value.trim()) {
+    localStorage.setItem('tc_apikey', document.getElementById('inp-key').value.trim());
+  }
   document.getElementById('join-btn').disabled=true;
   document.getElementById('join-btn').textContent='Verbinde…';
 
@@ -766,6 +773,11 @@ function onConnected() {
     renderSidebar();
   });
 
+  // Heartbeat: broadcast presence every 5 minutes so others know we're still here
+  setInterval(()=>{
+    ch.publish('pong', {id:me.id, name:me.name, avatar:me.avatar, color:me.color});
+  }, 5*60*1000);
+
   // Announce ourselves after connecting
   setTimeout(()=>{
     ch.publish('ping', {id:me.id, name:me.name, avatar:me.avatar, color:me.color});
@@ -811,19 +823,33 @@ function loadHistory(ch, roomId, done) {
 }
 
 // --- Members ------------------------------------------------------------------
-function addMember(u) { members[u.id]={...u,online:true}; }
+function addMember(u) { members[u.id]={...u,online:true,lastSeen:Date.now()}; }
 
 function renderSidebar() {
+  const ABSENT_MS = 60 * 60 * 1000; // 1 hour
+  const now = Date.now();
   const online = Object.values(members).filter(m=>m.online);
-  document.getElementById('online-count').textContent = online.length + 1; // +1 for self
+  const active = online.filter(m => !m.lastSeen || (now - m.lastSeen) < ABSENT_MS);
+  const absent = online.filter(m =>  m.lastSeen && (now - m.lastSeen) >= ABSENT_MS);
 
-  document.getElementById('members-list').innerHTML = online.length
-    ? online.map(u=>`<div class="sidebar-item" style="cursor:default">
+  document.getElementById('online-count').textContent = active.length + 1; // +1 for self
+
+  const memberHtml = (list, isAbsent) => list.map(u => {
+    const dot = isAbsent
+      ? `<span class="udot" style="background:var(--text3)" title="Abwesend"></span>`
+      : `<span class="udot" style="background:var(--green)"></span>`;
+    const nameStyle = isAbsent ? 'color:var(--text3)' : '';
+    const absentLabel = isAbsent ? `<span style="font-size:10px;color:var(--text3);margin-left:2px">abwesend</span>` : '';
+    return `<div class="sidebar-item" style="cursor:default;${isAbsent?'opacity:0.6':''}">
         <span style="width:20px;height:20px;border-radius:5px;background:${u.color};display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">${u.avatar}</span>
-        <span class="item-name">${u.name}</span>
-        <span class="udot" style="background:var(--green)"></span>
-      </div>`).join('')
-    : '<div style="font-size:12px;color:var(--text3);padding:6px 16px">Niemand online</div>';
+        <span class="item-name" style="${nameStyle}">${u.name}${absentLabel}</span>
+        ${dot}
+      </div>`;
+  }).join('');
+
+  const allHtml = memberHtml(active, false) + memberHtml(absent, true);
+  document.getElementById('members-list').innerHTML = allHtml ||
+    '<div style="font-size:12px;color:var(--text3);padding:6px 16px">Niemand online</div>';
 
   document.getElementById('dm-list').innerHTML = Object.values(dmRooms).map(dm=>{
     const u=dm.otherUser; const unr=unread[dm.id]||0;
@@ -897,6 +923,9 @@ function onMessage(roomId, msg) {
 
   // Register task in local lookup
   if(msg.isTask&&msg.taskData) tasks[msg.taskData.id]=msg.taskData;
+
+  // Update lastSeen for sender
+  if (msg.userId && members[msg.userId]) members[msg.userId].lastSeen = Date.now();
 
   messages[roomId].push(msg);
 
@@ -1462,6 +1491,19 @@ function setupPWA() {
   }
 }
 
+// --- Key management ----------------------------------------------------------
+function forgetKey() {
+  localStorage.removeItem('tc_apikey');
+  // Reset setup screen to show key field again
+  document.getElementById('key-section').style.display = 'block';
+  document.getElementById('inp-key').style.display = '';
+  document.querySelector('#key-section .setup-hint').style.display = '';
+  document.querySelector('#key-section label').style.display = '';
+  document.getElementById('forget-key-wrap').style.display = 'none';
+  document.querySelector('.setup-sub').textContent = 'Internes Kommunikations-Tool';
+  toast('API Key gelöscht');
+}
+
 // --- Init ---------------------------------------------------------------------
 window.onload=()=>{
   document.addEventListener('click', ()=>{ if(!audioCtx) initAudio(); }, {once:true});
@@ -1474,10 +1516,20 @@ window.onload=()=>{
     });
     renderMessages();
   }, 10*60*1000);
-  // Hide API key field if key is hardcoded
-  if (ABLY_KEY) {
+  // Restore key from localStorage
+  const savedKey = ABLY_KEY || localStorage.getItem('tc_apikey') || '';
+  if (savedKey) {
+    // Key known — hide key field, show only name
     document.getElementById('key-section').style.display = 'none';
-    document.querySelector('.setup-sub').textContent = 'Internes Kommunikations-Tool · Einfach Namen eingeben und loslegen';
+    document.querySelector('.setup-sub').textContent = 'Einfach Namen eingeben und loslegen';
+    // Show "forget key" option if it came from localStorage
+    if (!ABLY_KEY && localStorage.getItem('tc_apikey')) {
+      document.getElementById('key-section').style.display = 'block';
+      document.getElementById('inp-key').style.display = 'none';
+      document.querySelector('#key-section .setup-hint').style.display = 'none';
+      document.querySelector('#key-section label').style.display = 'none';
+      document.getElementById('forget-key-wrap').style.display = 'block';
+    }
   }
   // Restore saved name
   try{ const s=JSON.parse(localStorage.getItem('tc_me')||'{}'); if(s.name) document.getElementById('inp-name').value=s.name; }catch(e){}

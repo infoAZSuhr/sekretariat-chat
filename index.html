@@ -1250,21 +1250,9 @@ function setupPWA() {
 
   // Register service worker for offline support
   if ('serviceWorker' in navigator) {
-    const swCode = `
-      const CACHE = 'sekretariat-v1';
-      const ASSETS = [location.href];
-      self.addEventListener('install', e => {
-        e.waitUntil(caches.open(CACHE).then(c => c.addAll([])));
-        self.skipWaiting();
-      });
-      self.addEventListener('fetch', e => {
-        e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-      });
-    `;
-    const swBlob = new Blob([swCode], {type:'application/javascript'});
-    navigator.serviceWorker.register(URL.createObjectURL(swBlob))
+    navigator.serviceWorker.register('/sw.js')
       .then(()=>console.log('SW registered'))
-      .catch(e=>console.log('SW error:', e));
+      .catch(e=>console.log('SW skip (local file):', e.message));
   }
 }
 

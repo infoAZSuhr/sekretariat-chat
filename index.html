@@ -1189,7 +1189,7 @@ function openTaskModal() {
   updateTitlePreview();
   document.getElementById('task-patient').value='';
   document.getElementById('task-desc').value='';
-  document.getElementById('task-due').value='';
+  document.getElementById('task-due').value = new Date().toLocaleDateString('en-CA');
   const online=Object.values(members).filter(m=>m.online);
   document.getElementById('assign-chips').innerHTML=online.length
     ? online.map(u=>`<button class="assign-chip" data-uid="${u.id}" onclick="toggleAssign('${u.id}',this)">${u.avatar} ${u.name}</button>`).join('')

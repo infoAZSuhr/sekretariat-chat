@@ -504,8 +504,8 @@
     /* Notifications */
     .notif-popup { bottom: 12px; right: 12px; left: 12px; min-width: unset; max-width: unset; }
 
-    /* Hover actions always visible on touch */
-    .msg-hover-actions { opacity: 1 !important; top: -8px; }
+    /* On narrow screens: hide full emoji bar, only show reply + delete inline */
+    .msg-hover-actions { opacity: 0 !important; pointer-events: none; }
     .delete-btn { opacity: 1 !important; }
   }
 
@@ -1863,14 +1863,14 @@ window.onload=()=>{
     }
   });
   setupPWA();
-  // Clean messages older than 24h every 10 minutes
+  // Clean messages older than 2h every 5 minutes
   setInterval(()=>{
-    const cutoff = Date.now() - 24*60*60*1000;
+    const cutoff = Date.now() - 2*60*60*1000;
     Object.keys(messages).forEach(room => {
       messages[room] = (messages[room]||[]).filter(m => new Date(m.ts).getTime() > cutoff);
     });
     renderMessages();
-  }, 10*60*1000);
+  }, 5*60*1000);
   // Restore key from localStorage
   const savedKey = ABLY_KEY || localStorage.getItem('tc_apikey') || '';
   if (savedKey) {

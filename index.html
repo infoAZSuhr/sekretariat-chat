@@ -309,6 +309,56 @@
   .send-btn:hover { background: #2563eb; }
   .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
+  /* ── Sidebar wrapper + register tabs ── */
+  .sidebar-wrapper { position: relative; display: flex; flex-shrink: 0; }
+  .sidebar-tabs-col {
+    display: flex; flex-direction: column;
+    position: absolute; right: -34px; top: 50%;
+    transform: translateY(-50%);
+    gap: 4px; z-index: 10;
+  }
+  .sidebar-tab {
+    background: var(--accent); color: #fff;
+    width: 34px; border-radius: 0 8px 8px 0;
+    cursor: pointer; display: flex; align-items: center;
+    justify-content: center;
+    box-shadow: 3px 0 10px rgba(0,0,0,0.12);
+    transition: background 0.15s, width 0.15s;
+    padding: 18px 0; position: relative;
+  }
+  .sidebar-tab:hover, .sidebar-tab.active { background: #2563eb; width: 36px; }
+  .sidebar-tab-text {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.5px; white-space: nowrap;
+    user-select: none;
+  }
+  /* Register panel uses same CSS as task panel */
+  #register-panel {
+    border-bottom: 2px solid var(--border);
+    background: var(--surface);
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+    flex-shrink: 0;
+  }
+  #register-panel.open { max-height: 500px; }
+  /* ── Task Panel under header ── */
+  #task-panel {
+    border-bottom: 2px solid var(--border);
+    background: var(--surface);
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+    flex-shrink: 0;
+  }
+  #task-panel.open { max-height: 800px; }
+  .task-panel-inner { padding: 14px 20px 12px; }
+  .task-panel-inner .modal-input { font-size: 13px; padding: 8px 11px; margin-bottom: 8px; }
+  .task-panel-inner .modal-label { font-size: 10px; margin-bottom: 4px; }
+
   /* ── Notification Popup ── */
   .notif-popup {
     position: fixed; bottom: 24px; right: 24px; z-index: 500;
@@ -329,6 +379,25 @@
   .notif-close { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; flex-shrink: 0; line-height: 1; }
 
   /* ── Empty / Toast ── */
+  /* ── Auftragsregister ── */
+  .register-wrap { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .register-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .register-table th {
+    text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 700;
+    color: var(--text3); text-transform: uppercase; letter-spacing: 1px;
+    border-bottom: 2px solid var(--border); background: var(--surface);
+    position: sticky; top: 0; z-index: 1;
+  }
+  .register-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .register-table tr:hover td { background: var(--surface2); }
+  .reg-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .reg-status.pending  { background: rgba(245,158,11,0.12); color: var(--yellow); }
+  .reg-status.confirmed{ background: rgba(59,130,246,0.12); color: var(--accent); }
+  .reg-status.done     { background: rgba(16,185,129,0.12); color: var(--task-ok); }
+  .reg-title { font-weight: 600; color: var(--text); }
+  .reg-sub   { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .reg-empty { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 14px; }
+
   .empty-chat { margin: auto; text-align: center; padding: 48px; }
   .empty-icon  { font-size: 52px; margin-bottom: 14px; }
   .empty-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
@@ -483,6 +552,7 @@
 <!-- ── App ── -->
 <div id="app">
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <div class="sidebar-wrapper">
   <div class="sidebar" id="sidebar">
     <div class="sidebar-top">
       <div class="workspace-name"><img id="sidebar-logo" src="" style="width:22px;height:22px;object-fit:contain;border-radius:4px;flex-shrink:0" />AZS Intern</div>
@@ -501,8 +571,16 @@
       </div>
       <div class="sidebar-sec-title" style="margin-top:8px">Online</div>
       <div id="members-list"></div>
+
     </div>
   </div>
+  <!-- Two register tabs sticking out to the right -->
+  <div class="sidebar-tabs-col">
+    <div class="sidebar-tab" id="sidebar-tab-new" onmouseenter="openTabPanel('new')" onmouseleave="scheduleClosePanel()">
+      <span class="sidebar-tab-text">✏️ Neuer Auftrag</span>
+    </div>
+  </div>
+  </div><!-- /sidebar-wrapper -->
 
   <div class="chat-main">
     <div class="chat-header">
@@ -515,15 +593,61 @@
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="new-task-btn" id="new-task-btn" onclick="openTaskModal()">📋 Auftrag erstellen</button>
         <button class="members-btn" onclick="exportCsv()" title="Als CSV exportieren">📊 CSV</button>
         <button class="members-btn" onclick="scrollToMembers()">👥 <span class="online-count" id="online-count">1</span></button>
       </div>
     </div>
 
+    <!-- ── Task Panel under header ── -->
+    <div id="task-panel" style="display:none" onmouseenter="cancelClosePanel()" onmouseleave="scheduleClosePanel()">
+      <!-- Auftragsliste -->
+      <div id="task-panel-list" style="border-bottom:1px solid var(--border);max-height:220px;overflow-y:auto"></div>
+      <!-- Neuer Auftrag Formular -->
+      <div class="task-panel-inner">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px" id="task-panel-title">✏️ Neuer Auftrag</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <!-- Col 1: Name → Untersuchungen → Preview -->
+          <div style="flex:2;min-width:240px">
+            <label class="modal-label">Name / PID *</label>
+            <input class="modal-input" id="task-patient" placeholder="z.B. Muster Hans oder PID 12345" />
+            <label class="modal-label" style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+              <span>Untersuchungen (Reihenfolge beachten)</span>
+              <button onclick="showAddExamField()" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);padding:0">+ Hinzufügen</button>
+            </label>
+            <div id="title-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>
+            <div id="add-exam-field" style="display:none;margin-bottom:8px">
+              <div style="display:flex;gap:6px;align-items:center">
+                <input id="new-exam-input" class="modal-input" style="margin-bottom:0;flex:1" placeholder="Neue Untersuchung..." onkeydown="if(event.key==='Enter'){event.preventDefault();confirmAddExam()}" />
+                <button onclick="confirmAddExam()" class="btn-create" style="padding:7px 12px;font-size:12px">✓</button>
+                <button onclick="hideAddExamField()" class="btn-cancel" style="padding:7px 10px;font-size:12px">✕</button>
+              </div>
+            </div>
+            <div id="title-preview-wrap">
+              <div id="title-preview-chips"></div>
+              <div id="title-preview-hint" style="font-size:11px;color:var(--text3);margin-top:4px">Noch nichts ausgewählt</div>
+            </div>
+          </div>
+          <!-- Col 2: Beschreibung + Datum -->
+          <div style="flex:1;min-width:180px">
+            <label class="modal-label">Beschreibung</label>
+            <textarea class="modal-input" id="task-desc" rows="2" placeholder="Details, Anweisungen..."></textarea>
+            <label class="modal-label">Fälligkeitsdatum</label>
+            <input class="modal-input" id="task-due" type="date" />
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <button class="btn-cancel" onclick="closeTaskModal()">Abbrechen</button>
+          <button class="btn-create" id="task-panel-submit" onclick="submitTask()">Auftrag senden</button>
+        </div>
+      </div>
+    </div>
+
+
     <div class="messages-wrap" id="messages"></div>
+    <div class="register-wrap" id="register-view" style="display:none"></div>
     <div class="typing-bar" id="typing-bar"></div>
 
+    <div id="input-area-wrap">
     <div class="input-area">
       <div class="reply-bar" id="reply-bar" style="display:none">
         <span>↩</span>
@@ -540,43 +664,7 @@
   </div>
 </div>
 
-<!-- ── Task Modal ── -->
-<div class="modal-overlay" id="task-modal" style="display:none" onclick="if(event.target===this)closeTaskModal()">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-title">&#x1F4CB; Neuer Auftrag</div>
 
-    <label class="modal-label">Name / PID *</label>
-    <input class="modal-input" id="task-patient" placeholder="z.B. Muster Hans oder PID 12345" />
-
-    <label class="modal-label" style="display:flex;align-items:center;justify-content:space-between">
-      Untersuchungen anklicken (Reihenfolge beachten)
-      <button onclick="showAddExamField()" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);padding:0">+ Hinzufügen</button>
-    </label>
-    <div id="title-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>
-    <div id="add-exam-field" style="display:none;margin-bottom:10px;display:none">
-      <div style="display:flex;gap:6px;align-items:center">
-        <input id="new-exam-input" class="modal-input" style="margin-bottom:0;flex:1" placeholder="Name der Untersuchung..." onkeydown="if(event.key==='Enter'){event.preventDefault();confirmAddExam()}" />
-        <button onclick="confirmAddExam()" class="btn-create" style="padding:8px 14px;white-space:nowrap">Hinzufügen</button>
-        <button onclick="hideAddExamField()" class="btn-cancel" style="padding:8px 12px">✕</button>
-      </div>
-    </div>
-
-    <div id="title-preview-wrap" style="margin-bottom:14px">
-      <div id="title-preview-chips"></div>
-      <div id="title-preview-hint" style="font-size:11px;color:var(--text3);margin-top:5px">Noch nichts ausgew&#228;hlt</div>
-    </div>
-
-    <label class="modal-label">Beschreibung</label>
-    <textarea class="modal-input" id="task-desc" rows="2" placeholder="Details, Anweisungen..."></textarea>
-
-    <label class="modal-label">F&#228;lligkeitsdatum</label>
-    <input class="modal-input" id="task-due" type="date" />
-    <div class="modal-footer">
-      <button class="btn-cancel" onclick="closeTaskModal()">Abbrechen</button>
-      <button class="btn-create" onclick="submitTask()">Auftrag senden</button>
-    </div>
-  </div>
-</div>
 
 <script>
 // --- Config -------------------------------------------------------------------
@@ -972,12 +1060,60 @@ function showMainChannel() {
   unread['main']=0;
   document.getElementById('main-unread').style.display='none';
   document.getElementById('main-channel-item').classList.add('active');
+  document.getElementById('register-item').classList.remove('active');
   document.getElementById('room-icon').textContent='🗂️';
   document.getElementById('room-title').textContent='Sekretariat';
   document.getElementById('room-sub').textContent='Interner Kanal';
-  document.getElementById('new-task-btn').style.display='';
-  document.getElementById('msg-input').placeholder='Nachricht an #Sekretariat…';
+  document.getElementById('messages').style.display='';
+  document.getElementById('register-view').style.display='none';
+  document.getElementById('typing-bar').style.display='';
+  document.getElementById('input-area-wrap').style.display='';
   renderSidebar(); renderMessages(); scrollBottom();
+}
+
+function showRegister() {
+  closeSidebar();
+  activeRoom='register';
+  document.getElementById('main-channel-item').classList.remove('active');
+  document.getElementById('register-item').classList.add('active');
+  document.getElementById('room-icon').textContent='📋';
+  document.getElementById('room-title').textContent='Auftragsregister';
+  document.getElementById('room-sub').textContent='Alle Aufträge im Überblick';
+  document.getElementById('messages').style.display='none';
+  document.getElementById('register-view').style.display='';
+  document.getElementById('typing-bar').style.display='none';
+  document.getElementById('input-area-wrap').style.display='none';
+  renderRegister();
+}
+
+function renderRegister() {
+  const el = document.getElementById('register-view');
+  const allTasks = Object.values(tasks);
+  if (!allTasks.length) {
+    el.innerHTML = '<div class="reg-empty">📋<br><br>Noch keine Aufträge vorhanden</div>';
+    return;
+  }
+  // Sort: pending first, then confirmed, then done; within each by date desc
+  const order = { pending: 0, confirmed: 1, done: 2 };
+  allTasks.sort((a,b) => (order[a.status]||0) - (order[b.status]||0) || new Date(b.createdAt) - new Date(a.createdAt));
+  const statusLabel = { pending:'Offen', confirmed:'Angenommen', done:'Erledigt' };
+  const rows = allTasks.map(t => {
+    const due = t.dueDate ? new Date(t.dueDate).toLocaleDateString('de-DE') : '—';
+    const createdAt = t.createdAt ? new Date(t.createdAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    const by = t.status==='done' ? (t.doneBy||'') : t.status==='confirmed' ? (t.confirmedBy||'') : '';
+    const byLabel = t.status==='done' ? 'Erledigt' : 'Angenommen';
+    const bySub = by ? '<div class="reg-sub">'+byLabel+' von '+by+'</div>' : '';
+    const descSub = t.description ? '<div class="reg-sub">'+t.description+'</div>' : '';
+    return '<tr>'
+      +'<td><div class="reg-title">'+t.title+'</div>'+descSub+bySub+'</td>'
+      +'<td><span class="reg-status '+t.status+'">'+(statusLabel[t.status]||t.status)+'</span></td>'
+      +'<td><div class="reg-title">'+(t.createdByName||'—')+'</div><div class="reg-sub">'+createdAt+'</div></td>'
+      +'<td>'+due+'</td>'
+      +'</tr>';
+  }).join('');
+  el.innerHTML = '<table class="register-table">'
+    +'<thead><tr><th>Auftrag</th><th>Status</th><th>Erstellt von</th><th>Fällig</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table>';
 }
 
 
@@ -1034,6 +1170,16 @@ function onMessage(roomId, msg) {
   if (msg.userId && members[msg.userId]) members[msg.userId].lastSeen = Date.now();
 
   messages[roomId].push(msg);
+
+  // Update register badge for new pending tasks
+  if (msg.isTask && msg.taskData) {
+    const pendingCount = Object.values(tasks).filter(t=>t.status==='pending').length;
+    const badge = document.getElementById('register-badge');
+    if (badge) { badge.textContent = pendingCount; badge.style.display = pendingCount ? '' : 'none'; }
+    if (activeRoom === 'register') renderRegister();
+  if (document.getElementById('register-panel')?.classList.contains('open')) renderRegisterPanel();
+  if (document.getElementById('task-panel')?.classList.contains('open')) renderTaskPanelList();
+  }
 
   if(roomId===activeRoom) {
     appendMsgEl(msg); scrollBottom();
@@ -1231,6 +1377,9 @@ function onTaskUpdate(task) {
   const prev = tasks[task.id];
   tasks[task.id] = task;
   refreshTaskCard(task);
+  if (activeRoom === 'register') renderRegister();
+  if (document.getElementById('register-panel')?.classList.contains('open')) renderRegisterPanel();
+  if (document.getElementById('task-panel')?.classList.contains('open')) renderTaskPanelList();
   // Update in messages array
   const msgs = messages['main'] || [];
   const msgIdx = msgs.findIndex(m => m.isTask && m.taskData?.id === task.id);
@@ -1287,7 +1436,98 @@ function showTaskNotif(headline, byLine, title) {
 }
 
 // --- Task Modal ---------------------------------------------------------------
+let _closePanelTimer = null;
+function scheduleClosePanel() {
+  _closePanelTimer = setTimeout(()=>{ closeTaskModal(); }, 500);
+}
+function cancelClosePanel() {
+  clearTimeout(_closePanelTimer);
+}
+
+function renderTaskPanelList() {
+  const el = document.getElementById('task-panel-list');
+  if (!el) return;
+  const allTasks = Object.values(tasks);
+  if (!allTasks.length) {
+    el.innerHTML = '<div style="padding:10px 20px;font-size:12px;color:var(--text3)">Noch keine Aufträge vorhanden</div>';
+    return;
+  }
+  const order = { pending:0, confirmed:1, done:2 };
+  allTasks.sort((a,b)=>(order[a.status]||0)-(order[b.status]||0)||new Date(b.createdAt)-new Date(a.createdAt));
+  const statusLabel = { pending:'Offen', confirmed:'Angenommen', done:'Erledigt' };
+  el.innerHTML = '<table class="register-table">'
+    +'<thead><tr><th>Auftrag</th><th>Status</th><th>Von</th><th>Fällig</th></tr></thead>'
+    +'<tbody>'
+    + allTasks.map(t => {
+        const due = t.dueDate ? new Date(t.dueDate).toLocaleDateString('de-DE') : '—';
+        const by = t.status==='done'?(t.doneBy||''):t.status==='confirmed'?(t.confirmedBy||''):'';
+        const byTxt = by ? '<div class="reg-sub">'+(t.status==='done'?'Erl.':'Ann.')+' v. '+by+'</div>' : '';
+        return '<tr>'
+          +'<td><div class="reg-title">'+t.title+'</div>'+byTxt+'</td>'
+          +'<td><span class="reg-status '+t.status+'">'+(statusLabel[t.status]||t.status)+'</span></td>'
+          +'<td style="font-size:12px">'+(t.createdByName||'—')+'</td>'
+          +'<td style="font-size:12px">'+due+'</td>'
+          +'</tr>';
+      }).join('')
+    +'</tbody></table>';
+}
+
+function openTabPanel(which) {
+  cancelClosePanel();
+  if (which === 'new') openTaskModal();
+  else openRegisterPanel();
+}
+
+function openRegisterPanel() {
+  const panel = document.getElementById('register-panel');
+  panel.style.display = 'block';
+  document.getElementById('sidebar-tab-list')?.classList.add('active');
+  requestAnimationFrame(()=>{ panel.classList.add('open'); });
+  renderRegisterPanel();
+}
+
+function closeRegisterPanel() {
+  const panel = document.getElementById('register-panel');
+  panel.classList.remove('open');
+  document.getElementById('sidebar-tab-list')?.classList.remove('active');
+  setTimeout(()=>{ if (!panel.classList.contains('open')) panel.style.display='none'; }, 400);
+}
+
+function renderRegisterPanel() {
+  const el = document.getElementById('register-panel-content');
+  const allTasks = Object.values(tasks);
+  if (!allTasks.length) {
+    el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">Noch keine Aufträge</div>';
+    return;
+  }
+  const order = { pending:0, confirmed:1, done:2 };
+  allTasks.sort((a,b)=>(order[a.status]||0)-(order[b.status]||0)||new Date(b.createdAt)-new Date(a.createdAt));
+  const statusLabel = { pending:'Offen', confirmed:'Angenommen', done:'Erledigt' };
+  const statusClass = { pending:'tb-pending', confirmed:'tb-confirmed', done:'tb-done' };
+  el.innerHTML = '<div style="max-height:380px;overflow-y:auto">'
+    +'<table class="register-table">'
+    +'<thead><tr><th>Auftrag</th><th>Status</th><th>Von</th><th>Fällig</th></tr></thead>'
+    +'<tbody>'
+    + allTasks.map(t => {
+        const due = t.dueDate ? new Date(t.dueDate).toLocaleDateString('de-DE') : '—';
+        const by = t.status==='done'?(t.doneBy||''):t.status==='confirmed'?(t.confirmedBy||''):'';
+        const byTxt = by ? '<div class="reg-sub">'+(t.status==='done'?'Erl.':'Ann.')+' v. '+by+'</div>' : '';
+        const desc = t.description ? '<div class="reg-sub">'+t.description+'</div>' : '';
+        return '<tr>'
+          +'<td><div class="reg-title">'+t.title+'</div>'+desc+byTxt+'</td>'
+          +'<td><span class="reg-status '+t.status+'">'+(statusLabel[t.status]||t.status)+'</span></td>'
+          +'<td style="font-size:12px">'+(t.createdByName||'—')+'</td>'
+          +'<td style="font-size:12px">'+due+'</td>'
+          +'</tr>';
+      }).join('')
+    +'</tbody></table></div>';
+}
+
 function openTaskModal() {
+  cancelClosePanel();
+  const panel = document.getElementById('task-panel');
+  if (panel.classList.contains('open')) return; // already open
+  document.getElementById('sidebar-tab-new')?.classList.add('active');
   taskAssigned=[];
   titleOrder=[];
   renderTitleChips();
@@ -1295,13 +1535,18 @@ function openTaskModal() {
   document.getElementById('task-patient').value='';
   document.getElementById('task-desc').value='';
   document.getElementById('task-due').value = new Date().toLocaleDateString('en-CA');
-  document.getElementById('task-modal').style.display='flex';
-  setTimeout(()=>document.getElementById('task-patient').focus(),60);
+  document.getElementById('task-panel-title').textContent = '📋 Neuer Auftrag';
+  document.getElementById('task-panel-submit').textContent = 'Auftrag senden';
+  panel.style.display = 'block';
+  requestAnimationFrame(()=>{ panel.classList.add('open'); });
+  // Scroll sidebar to show panel
+  setTimeout(()=>document.getElementById('task-patient').focus(), 350);
 }
 function closeTaskModal() {
-  document.getElementById('task-modal').style.display='none';
-  document.querySelector('.modal-title').textContent = '📋 Neuer Auftrag';
-  document.querySelector('.btn-create').textContent = 'Auftrag senden';
+  const panel = document.getElementById('task-panel');
+  panel.classList.remove('open');
+  document.getElementById('sidebar-tab-new')?.classList.remove('active');
+  setTimeout(()=>{ if (!panel.classList.contains('open')) panel.style.display='none'; }, 400);
   editingTaskId = null;
   editingMsgId  = null;
 }
@@ -1376,10 +1621,13 @@ function editTask(taskId) {
   document.getElementById('task-due').value = task.dueDate || '';
 
   // Update modal title and button
-  document.querySelector('.modal-title').textContent = '✏️ Auftrag bearbeiten';
-  document.querySelector('.btn-create').textContent = 'Speichern';
-  document.getElementById('task-modal').style.display='flex';
-  setTimeout(()=>document.getElementById('task-patient').focus(), 60);
+  document.getElementById('task-panel-title').textContent = '✏️ Auftrag bearbeiten';
+  document.getElementById('task-panel-submit').textContent = 'Speichern';
+  const panel = document.getElementById('task-panel');
+  panel.style.display = 'block';
+  requestAnimationFrame(()=>{ panel.classList.add('open'); });
+  renderTaskPanelList();
+  setTimeout(()=>document.getElementById('task-patient').focus(), 350);
 }
 
 function deleteTask(taskId) {
@@ -1571,11 +1819,27 @@ function setupPWA() {
   const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
   document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
 
-  // Register service worker (only on real hosted URLs, not preview/local)
+  // Register service worker — auto-reload on update
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.includes('claudeusercontent')) {
-    navigator.serviceWorker.register('/sw.js')
-      .then(()=>console.log('SW registered'))
-      .catch(e=>console.log('SW skip:', e.message));
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('SW registered');
+      // New SW waiting → skip waiting → reload all clients
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version ready — reload page automatically
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+    }).catch(e => console.log('SW skip:', e.message));
+
+    // When SW activates new version, reload the page
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) { refreshing = true; window.location.reload(); }
+    });
   }
 }
 
@@ -1595,6 +1859,17 @@ function forgetKey() {
 // --- Init ---------------------------------------------------------------------
 window.onload=()=>{
   document.addEventListener('click', ()=>{ if(!audioCtx) initAudio(); }, {once:true});
+  // Close panel on click outside (with small delay so tab click registers first)
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('task-panel');
+    const tab   = document.getElementById('sidebar-tab-new');
+    const tabsCol = document.querySelector('.sidebar-tabs-col');
+    if (panel && panel.classList.contains('open')) {
+      if (!panel.contains(e.target) && !tabsCol?.contains(e.target)) {
+        closeTaskModal();
+      }
+    }
+  });
   setupPWA();
   // Clean messages older than 24h every 10 minutes
   setInterval(()=>{

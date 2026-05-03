@@ -183,6 +183,13 @@
   }
   .msg-row:hover .delete-btn { opacity: 1; }
   .delete-btn:hover { background: rgba(239,68,68,0.15); border-color: var(--red); transform: scale(1.1); }
+  .react-btn {
+    background: var(--surface2); border: 1px solid var(--border); cursor: pointer;
+    font-size: 14px; opacity: 0; transition: all 0.15s; padding: 4px 6px;
+    flex-shrink: 0; align-self: center; border-radius: 7px;
+  }
+  .msg-row:hover .react-btn { opacity: 1; }
+  .react-btn:hover { background: var(--accent-glow); border-color: var(--accent); transform: scale(1.1); }
   /* Reply button always visible on hover */
   .msg-hover-actions { opacity: 0; }
   .msg-row:hover .msg-hover-actions { opacity: 1; }
@@ -1282,13 +1289,13 @@ function buildMsgEl(msg, allMsgs) {
       ${replyHtml}
       <div style="display:flex;align-items:flex-end;gap:5px;${isOwn?'flex-direction:row-reverse':''}">
         <div class="bubble ${isOwn?'own':'other'}">${md(msg.content)}${fileHtml}</div>
+        <button class="react-btn" onclick="addReaction('${msg.id}','👍')" title="👍">👍</button>
         ${isOwn?`<button class="delete-btn" onclick="deleteMsg('${msg.id}')" title="Löschen">🗑</button>`:''}
       </div>
       <div class="reactions-row" id="reactions_${msg.id}">${renderReactions(msg)}</div>
       ${isOwn?`<div class="msg-meta" style="justify-content:flex-end"><span>${fmtTime(msg.ts)}</span></div>`:''}
     </div>
     <div class="msg-hover-actions">
-      <div style="display:flex;gap:2px">${emojiBar}</div>
       <button class="action-btn" onclick="setReply('${msg.id}')">↩</button>
     </div>`;
   return div;

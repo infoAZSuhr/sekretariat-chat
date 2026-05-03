@@ -312,21 +312,7 @@
     transition: opacity 0.15s, background 0.15s;
   }
   .emoji-picker-btn:hover { opacity: 1; background: var(--surface2); }
-  #emoji-picker-popup {
-    position: absolute; bottom: 60px; right: 16px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 8px; z-index: 100;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-    display: none; flex-wrap: wrap; gap: 2px;
-    max-width: min(260px, calc(100vw - 32px));
-  }
-  #emoji-picker-popup.open { display: flex; }
-  #emoji-picker-popup button {
-    background: none; border: none; cursor: pointer; font-size: 18px;
-    padding: 3px 4px; border-radius: 6px; transition: background 0.1s;
-    line-height: 1;
-  }
-  #emoji-picker-popup button:hover { background: var(--surface2); }
+
   .send-btn { width: 36px; height: 36px; background: var(--accent); border: none; border-radius: 9px; cursor: pointer; color: #fff; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
   .send-btn:hover { background: #2563eb; }
   .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -709,7 +695,6 @@
     <div class="typing-bar" id="typing-bar"></div>
 
     <div id="input-area-wrap">
-    <div id="emoji-picker-popup"></div>
     <div class="input-area">
       <div class="reply-bar" id="reply-bar" style="display:none">
         <span>↩</span>
@@ -1537,42 +1522,13 @@ function initPatientBar() {
   });
 }
 
-// --- Emoji Picker -------------------------------------------------------------
-const EMOJI_FULL = ['😀','😂','😍','🥰','😎','🤔','😅','🙈','👍','👎','❤️','🔥','🎉','✅','⚠️','❌','💡','📋','👀','🙏','💪','🤝','👋','✌️','😊','😢','😡','🤒','💊','🏥','👁️','🩺','📅','⏰','🔔','📞'];
-
-function buildEmojiPicker() {
-  const popup = document.getElementById('emoji-picker-popup');
-  if (popup.children.length) return;
-  popup.innerHTML = EMOJI_FULL.map(e =>
-    `<button onclick="insertEmoji('${e}')">${e}</button>`
-  ).join('');
-}
-
-function toggleEmojiPicker(e) {
-  e.stopPropagation();
-  buildEmojiPicker();
-  const popup = document.getElementById('emoji-picker-popup');
-  popup.classList.toggle('open');
-}
-
-function insertEmoji(emoji) {
+// --- Thumbs Up ----------------------------------------------------------------
+function sendThumbsUp() {
   const input = document.getElementById('msg-input');
-  const start = input.selectionStart;
-  const end   = input.selectionEnd;
-  const val   = input.value;
-  input.value = val.slice(0, start) + emoji + val.slice(end);
-  input.selectionStart = input.selectionEnd = start + emoji.length;
+  input.value = '👍';
   input.dispatchEvent(new Event('input'));
-  input.focus();
-  document.getElementById('emoji-picker-popup').classList.remove('open');
+  sendMessage();
 }
-
-// Close picker on click outside
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('#emoji-picker-popup') && !e.target.closest('#emoji-picker-btn')) {
-    document.getElementById('emoji-picker-popup')?.classList.remove('open');
-  }
-});
 
 function renderTaskPanelList() {
   const el = document.getElementById('task-panel-list');

@@ -1910,17 +1910,7 @@ window.onload=()=>{
   }
   handleVipHash();
   window.addEventListener('hashchange', handleVipHash);
-  // Close panel on click outside (with small delay so tab click registers first)
-  document.addEventListener('click', (e) => {
-    const panel = document.getElementById('task-panel');
-    const tab   = document.getElementById('sidebar-tab-new');
-    const tabsCol = document.querySelector('.sidebar-tabs-col');
-    if (panel && panel.classList.contains('open')) {
-      if (!panel.contains(e.target) && !tabsCol?.contains(e.target)) {
-        closeTaskModal();
-      }
-    }
-  });
+  // Panel only closes via Abbrechen/Senden buttons
   setupPWA();
   // Clean messages older than 2h every 5 minutes
   setInterval(()=>{

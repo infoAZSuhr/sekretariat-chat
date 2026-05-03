@@ -367,35 +367,7 @@
   .task-panel-inner .modal-input { font-size: 13px; padding: 8px 11px; margin-bottom: 8px; }
   .task-panel-inner .modal-label { font-size: 10px; margin-bottom: 4px; }
 
-  /* ── Patient Bar ── */
-  #patient-bar {
-    display: flex; align-items: center; gap: 6px;
-    padding: 7px 16px; border-bottom: 1px solid var(--border);
-    background: var(--surface); flex-shrink: 0;
-  }
-  .patient-bar-label { font-size: 16px; flex-shrink: 0; }
-  #patient-bar-input {
-    flex: 1; background: var(--surface2); border: 1.5px solid var(--border);
-    border-radius: 8px; padding: 6px 11px; color: var(--text);
-    font-family: var(--font); font-size: 13px; outline: none;
-    transition: border 0.2s;
-  }
-  #patient-bar-input:focus { border-color: var(--accent); }
-  #patient-bar-input::placeholder { color: var(--text3); }
-  #patient-bar-chat, #patient-bar-auftrag {
-    background: var(--accent); color: #fff; border: none;
-    border-radius: 7px; padding: 6px 11px; font-size: 12px;
-    font-weight: 700; cursor: pointer; font-family: var(--font);
-    white-space: nowrap; transition: background 0.15s;
-  }
-  #patient-bar-chat { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
-  #patient-bar-chat:hover { background: var(--surface); color: var(--text); }
-  #patient-bar-auftrag:hover { background: #2563eb; }
-  #patient-bar-clear {
-    background: none; border: none; cursor: pointer; color: var(--text3);
-    font-size: 15px; padding: 4px 6px; border-radius: 6px; line-height: 1;
-  }
-  #patient-bar-clear:hover { background: var(--surface2); color: var(--text); }
+
 
   /* ── Notification Popup ── */
   .notif-popup {
@@ -636,14 +608,6 @@
       </div>
     </div>
 
-    <!-- ── Patient Bar ── -->
-    <div id="patient-bar">
-      <span class="patient-bar-label">👤</span>
-      <input id="patient-bar-input" placeholder="Nachname #PID — z.B. Muster #12345" autocomplete="off" />
-      <button id="patient-bar-chat" title="Als Nachricht senden">💬</button>
-      <button id="patient-bar-auftrag" title="In Auftrag übernehmen">📋</button>
-      <button id="patient-bar-clear" title="Löschen">✕</button>
-    </div>
 
     <!-- ── Task Panel under header ── -->
     <div id="task-panel" style="display:none" onmouseenter="cancelClosePanel()" onmouseleave="scheduleClosePanel()">
@@ -773,7 +737,7 @@ function deleteCustomExam(label) {
   updateTitlePreview();
 }
 
-const EMOJIS  = ['👍','❤️','😂','😮','🎉','🔥','','😢'];
+const EMOJIS  = ['👍'];
 const COLORS  = ['#4f46e5','#7c3aed','#db2777','#dc2626','#d97706','#059669','#0891b2','#9333ea'];
 
 // --- State --------------------------------------------------------------------
@@ -1029,7 +993,6 @@ function onConnected() {
   document.getElementById('app').classList.add('visible');
   requestNotifPermission();
   initAudio(); // init on user gesture
-  initPatientBar();
   document.getElementById('me-avatar').textContent=me.avatar;
   document.getElementById('me-avatar').style.background=me.color;
   document.getElementById('me-name-display').textContent=me.name;
@@ -1482,44 +1445,6 @@ function scheduleClosePanel() {
 }
 function cancelClosePanel() {
   clearTimeout(_closePanelTimer);
-}
-
-// --- Patient Bar ---------------------------------------------------------------
-function initPatientBar() {
-  const input = document.getElementById('patient-bar-input');
-  const chatBtn    = document.getElementById('patient-bar-chat');
-  const auftragBtn = document.getElementById('patient-bar-auftrag');
-  const clearBtn   = document.getElementById('patient-bar-clear');
-
-  chatBtn.addEventListener('click', () => {
-    const val = input.value.trim();
-    if (!val) return;
-    const msgInput = document.getElementById('msg-input');
-    msgInput.value = val;
-    msgInput.dispatchEvent(new Event('input'));
-    msgInput.focus();
-    toast('👤 ' + val + ' — bereit zum Senden');
-  });
-
-  auftragBtn.addEventListener('click', () => {
-    const val = input.value.trim();
-    if (!val) return;
-    openTaskModal();
-    setTimeout(() => {
-      const p = document.getElementById('task-patient');
-      if (p) { p.value = val; p.focus(); }
-    }, 400);
-  });
-
-  clearBtn.addEventListener('click', () => {
-    input.value = '';
-    input.focus();
-  });
-
-  // Enter key → focus chat input
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') chatBtn.click();
-  });
 }
 
 // --- Thumbs Up ----------------------------------------------------------------

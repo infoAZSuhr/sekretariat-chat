@@ -71,6 +71,7 @@
   #app { display: none; height: 100vh; }
   #app.visible { display: flex; }
 
+
   /* ── Sidebar ── */
   .sidebar {
     width: 240px; background: var(--sidebar); border-right: 1px solid var(--border);
@@ -305,6 +306,26 @@
   .msg-textarea::placeholder { color: var(--text3); }
   .attach-btn { background: none; border: none; cursor: pointer; font-size: 18px; padding: 5px; color: var(--text3); border-radius: 7px; transition: all 0.15s; flex-shrink: 0; }
   .attach-btn:hover { background: var(--surface2); color: var(--text); }
+  .emoji-picker-btn {
+    background: none; border: none; cursor: pointer; font-size: 20px;
+    padding: 2px 4px; border-radius: 7px; flex-shrink: 0; opacity: 0.7;
+    transition: opacity 0.15s, background 0.15s;
+  }
+  .emoji-picker-btn:hover { opacity: 1; background: var(--surface2); }
+  #emoji-picker-popup {
+    position: absolute; bottom: 60px; right: 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px; z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    display: none; flex-wrap: wrap; gap: 4px; max-width: 280px;
+  }
+  #emoji-picker-popup.open { display: flex; }
+  #emoji-picker-popup button {
+    background: none; border: none; cursor: pointer; font-size: 22px;
+    padding: 4px 5px; border-radius: 7px; transition: background 0.1s;
+    line-height: 1;
+  }
+  #emoji-picker-popup button:hover { background: var(--surface2); }
   .send-btn { width: 36px; height: 36px; background: var(--accent); border: none; border-radius: 9px; cursor: pointer; color: #fff; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
   .send-btn:hover { background: #2563eb; }
   .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -358,6 +379,36 @@
   .task-panel-inner { padding: 14px 20px 12px; }
   .task-panel-inner .modal-input { font-size: 13px; padding: 8px 11px; margin-bottom: 8px; }
   .task-panel-inner .modal-label { font-size: 10px; margin-bottom: 4px; }
+
+  /* ── Patient Bar ── */
+  #patient-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 16px; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
+  }
+  .patient-bar-label { font-size: 16px; flex-shrink: 0; }
+  #patient-bar-input {
+    flex: 1; background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 6px 11px; color: var(--text);
+    font-family: var(--font); font-size: 13px; outline: none;
+    transition: border 0.2s;
+  }
+  #patient-bar-input:focus { border-color: var(--accent); }
+  #patient-bar-input::placeholder { color: var(--text3); }
+  #patient-bar-chat, #patient-bar-auftrag {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 7px; padding: 6px 11px; font-size: 12px;
+    font-weight: 700; cursor: pointer; font-family: var(--font);
+    white-space: nowrap; transition: background 0.15s;
+  }
+  #patient-bar-chat { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  #patient-bar-chat:hover { background: var(--surface); color: var(--text); }
+  #patient-bar-auftrag:hover { background: #2563eb; }
+  #patient-bar-clear {
+    background: none; border: none; cursor: pointer; color: var(--text3);
+    font-size: 15px; padding: 4px 6px; border-radius: 6px; line-height: 1;
+  }
+  #patient-bar-clear:hover { background: var(--surface2); color: var(--text); }
 
   /* ── Notification Popup ── */
   .notif-popup {
@@ -598,6 +649,15 @@
       </div>
     </div>
 
+    <!-- ── Patient Bar ── -->
+    <div id="patient-bar">
+      <span class="patient-bar-label">👤</span>
+      <input id="patient-bar-input" placeholder="Nachname #PID — z.B. Muster #12345" autocomplete="off" />
+      <button id="patient-bar-chat" title="Als Nachricht senden">💬</button>
+      <button id="patient-bar-auftrag" title="In Auftrag übernehmen">📋</button>
+      <button id="patient-bar-clear" title="Löschen">✕</button>
+    </div>
+
     <!-- ── Task Panel under header ── -->
     <div id="task-panel" style="display:none" onmouseenter="cancelClosePanel()" onmouseleave="scheduleClosePanel()">
       <!-- Auftragsliste -->
@@ -648,6 +708,7 @@
     <div class="typing-bar" id="typing-bar"></div>
 
     <div id="input-area-wrap">
+    <div id="emoji-picker-popup"></div>
     <div class="input-area">
       <div class="reply-bar" id="reply-bar" style="display:none">
         <span>↩</span>
@@ -982,6 +1043,7 @@ function onConnected() {
   document.getElementById('app').classList.add('visible');
   requestNotifPermission();
   initAudio(); // init on user gesture
+  initPatientBar();
   document.getElementById('me-avatar').textContent=me.avatar;
   document.getElementById('me-avatar').style.background=me.color;
   document.getElementById('me-name-display').textContent=me.name;
@@ -1436,6 +1498,81 @@ function cancelClosePanel() {
   clearTimeout(_closePanelTimer);
 }
 
+// --- Patient Bar ---------------------------------------------------------------
+function initPatientBar() {
+  const input = document.getElementById('patient-bar-input');
+  const chatBtn    = document.getElementById('patient-bar-chat');
+  const auftragBtn = document.getElementById('patient-bar-auftrag');
+  const clearBtn   = document.getElementById('patient-bar-clear');
+
+  chatBtn.addEventListener('click', () => {
+    const val = input.value.trim();
+    if (!val) return;
+    const msgInput = document.getElementById('msg-input');
+    msgInput.value = val;
+    msgInput.dispatchEvent(new Event('input'));
+    msgInput.focus();
+    toast('👤 ' + val + ' — bereit zum Senden');
+  });
+
+  auftragBtn.addEventListener('click', () => {
+    const val = input.value.trim();
+    if (!val) return;
+    openTaskModal();
+    setTimeout(() => {
+      const p = document.getElementById('task-patient');
+      if (p) { p.value = val; p.focus(); }
+    }, 400);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    input.focus();
+  });
+
+  // Enter key → focus chat input
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') chatBtn.click();
+  });
+}
+
+// --- Emoji Picker -------------------------------------------------------------
+const EMOJI_FULL = ['😀','😂','😍','🥰','😎','🤔','😅','🙈','👍','👎','❤️','🔥','🎉','✅','⚠️','❌','💡','📋','👀','🙏','💪','🤝','👋','✌️','😊','😢','😡','🤒','💊','🏥','👁️','🩺','📅','⏰','🔔','📞'];
+
+function buildEmojiPicker() {
+  const popup = document.getElementById('emoji-picker-popup');
+  if (popup.children.length) return;
+  popup.innerHTML = EMOJI_FULL.map(e =>
+    `<button onclick="insertEmoji('${e}')">${e}</button>`
+  ).join('');
+}
+
+function toggleEmojiPicker(e) {
+  e.stopPropagation();
+  buildEmojiPicker();
+  const popup = document.getElementById('emoji-picker-popup');
+  popup.classList.toggle('open');
+}
+
+function insertEmoji(emoji) {
+  const input = document.getElementById('msg-input');
+  const start = input.selectionStart;
+  const end   = input.selectionEnd;
+  const val   = input.value;
+  input.value = val.slice(0, start) + emoji + val.slice(end);
+  input.selectionStart = input.selectionEnd = start + emoji.length;
+  input.dispatchEvent(new Event('input'));
+  input.focus();
+  document.getElementById('emoji-picker-popup').classList.remove('open');
+}
+
+// Close picker on click outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#emoji-picker-popup') && !e.target.closest('#emoji-picker-btn')) {
+    document.getElementById('emoji-picker-popup')?.classList.remove('open');
+  }
+});
+
 function renderTaskPanelList() {
   const el = document.getElementById('task-panel-list');
   if (!el) return;
@@ -1851,6 +1988,49 @@ function forgetKey() {
 // --- Init ---------------------------------------------------------------------
 window.onload=()=>{
   document.addEventListener('click', ()=>{ if(!audioCtx) initAudio(); }, {once:true});
+
+  // ── VIP Connector: handle incoming patient data via URL hash ──
+  function handleVipHash() {
+    const hash = decodeURIComponent(location.hash.slice(1));
+    if (!hash) return;
+    if (hash.startsWith('chat:')) {
+      const patient = hash.slice(5);
+      // Wait for app to be ready, then fill chat input
+      const tryFill = setInterval(() => {
+        const input = document.getElementById('msg-input');
+        if (input && document.getElementById('app')?.classList.contains('visible')) {
+          clearInterval(tryFill);
+          input.value = patient;
+          input.dispatchEvent(new Event('input'));
+          input.focus();
+          // Also fill patient bar
+          const pb = document.getElementById('patient-bar-input');
+          if (pb) pb.value = patient;
+          toast('👤 ' + patient + ' — bereit zum Senden');
+        }
+      }, 200);
+      setTimeout(() => clearInterval(tryFill), 5000);
+    } else if (hash.startsWith('auftrag:')) {
+      const patient = hash.slice(8);
+      const tryFill = setInterval(() => {
+        const patInput = document.getElementById('task-patient');
+        if (patInput && document.getElementById('app')?.classList.contains('visible')) {
+          clearInterval(tryFill);
+          openTaskModal();
+          setTimeout(() => {
+            document.getElementById('task-patient').value = patient;
+            document.getElementById('task-patient').focus();
+            toast('👤 ' + patient + ' — Auftrag vorbereitet');
+          }, 400);
+        }
+      }, 200);
+      setTimeout(() => clearInterval(tryFill), 5000);
+    }
+    // Clear hash after processing
+    history.replaceState(null, '', location.pathname);
+  }
+  handleVipHash();
+  window.addEventListener('hashchange', handleVipHash);
   // Close panel on click outside (with small delay so tab click registers first)
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('task-panel');

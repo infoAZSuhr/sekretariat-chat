@@ -593,7 +593,7 @@
   </div>
   <!-- Two register tabs sticking out to the right -->
   <div class="sidebar-tabs-col">
-    <div class="sidebar-tab" id="sidebar-tab-new" onmouseenter="openTabPanel('new')" onmouseleave="scheduleClosePanel()">
+    <div class="sidebar-tab" id="sidebar-tab-new" onmouseenter="openTabPanel('new')">
       <span class="sidebar-tab-text">✏️ Neuer Auftrag</span>
     </div>
   </div>
@@ -617,7 +617,7 @@
 
 
     <!-- ── Task Panel under header ── -->
-    <div id="task-panel" style="display:none" onmouseenter="cancelClosePanel()" onmouseleave="scheduleClosePanel()">
+    <div id="task-panel" style="display:none" >
       <!-- Auftragsliste -->
       <div id="task-panel-list" style="border-bottom:1px solid var(--border);max-height:220px;overflow-y:auto"></div>
       <!-- Neuer Auftrag Formular -->
@@ -1446,14 +1446,6 @@ function showTaskNotif(headline, byLine, title) {
 }
 
 // --- Task Modal ---------------------------------------------------------------
-let _closePanelTimer = null;
-function scheduleClosePanel() {
-  _closePanelTimer = setTimeout(()=>{ closeTaskModal(); }, 500);
-}
-function cancelClosePanel() {
-  clearTimeout(_closePanelTimer);
-}
-
 // --- Thumbs Up ----------------------------------------------------------------
 function sendThumbsUp() {
   const input = document.getElementById('msg-input');
@@ -1491,7 +1483,6 @@ function renderTaskPanelList() {
 }
 
 function openTabPanel(which) {
-  cancelClosePanel();
   if (which === 'new') openTaskModal();
   else openRegisterPanel();
 }
@@ -1542,7 +1533,6 @@ function renderRegisterPanel() {
 }
 
 function openTaskModal() {
-  cancelClosePanel();
   const panel = document.getElementById('task-panel');
   if (panel.classList.contains('open')) return; // already open
   document.getElementById('sidebar-tab-new')?.classList.add('active');

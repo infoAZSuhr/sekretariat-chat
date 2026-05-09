@@ -609,7 +609,10 @@
       <div id="task-panel-list" style="border-bottom:1px solid var(--border);max-height:220px;overflow-y:auto"></div>
       <!-- Neuer Auftrag Formular -->
       <div class="task-panel-inner">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px" id="task-panel-title">✏️ Neuer Auftrag</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase" id="task-panel-title">✏️ Neuer Auftrag</div>
+          <button onclick="cancelTaskModal()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;line-height:1;padding:0 4px;border-radius:5px" title="Schliessen">✕</button>
+        </div>
         <div style="display:flex;gap:16px;flex-wrap:wrap">
           <!-- Col 1: Name → Untersuchungen → Preview -->
           <div style="flex:2;min-width:240px">
@@ -1931,15 +1934,7 @@ window.onload=()=>{
   }
   handleVipHash();
   window.addEventListener('hashchange', handleVipHash);
-  // Close panel on click outside — use capture phase to check BEFORE re-renders
-  document.addEventListener('click', (e) => {
-    const panel = document.getElementById('task-panel');
-    const btn   = document.getElementById('sidebar-tab-new');
-    if (!panel || !panel.classList.contains('open')) return;
-    // Check if click is inside panel or button using closest()
-    if (e.target.closest('#task-panel') || e.target.closest('#sidebar-tab-new')) return;
-    closeTaskModal();
-  });
+
   setupPWA();
   // Clean messages older than 2h every 5 minutes
   setInterval(()=>{

@@ -1885,7 +1885,16 @@ window.onload=()=>{
   }
   handleVipHash();
   window.addEventListener('hashchange', handleVipHash);
-  // Panel only closes via Abbrechen/Senden buttons
+  // Close panel on click outside
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('task-panel');
+    const btn   = document.getElementById('sidebar-tab-new');
+    if (panel && panel.classList.contains('open')) {
+      if (!panel.contains(e.target) && !btn?.contains(e.target)) {
+        closeTaskModal();
+      }
+    }
+  });
   setupPWA();
   // Clean messages older than 2h every 5 minutes
   setInterval(()=>{

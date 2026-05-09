@@ -1931,15 +1931,14 @@ window.onload=()=>{
   }
   handleVipHash();
   window.addEventListener('hashchange', handleVipHash);
-  // Close panel on click outside
+  // Close panel on click outside — use capture phase to check BEFORE re-renders
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('task-panel');
     const btn   = document.getElementById('sidebar-tab-new');
-    if (panel && panel.classList.contains('open')) {
-      if (!panel.contains(e.target) && !btn?.contains(e.target)) {
-        closeTaskModal();
-      }
-    }
+    if (!panel || !panel.classList.contains('open')) return;
+    // Check if click is inside panel or button using closest()
+    if (e.target.closest('#task-panel') || e.target.closest('#sidebar-tab-new')) return;
+    closeTaskModal();
   });
   setupPWA();
   // Clean messages older than 2h every 5 minutes

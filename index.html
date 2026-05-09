@@ -324,32 +324,8 @@
   .send-btn:hover { background: #2563eb; }
   .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-  /* ── Sidebar wrapper + register tabs ── */
+  /* ── Sidebar wrapper ── */
   .sidebar-wrapper { position: relative; display: flex; flex-shrink: 0; }
-  .sidebar-tabs-col {
-    display: flex; flex-direction: column;
-    position: absolute; right: -34px; top: 50%;
-    transform: translateY(-50%);
-    gap: 4px; z-index: 10;
-  }
-  .sidebar-tab {
-    background: var(--accent); color: #fff;
-    width: 34px; border-radius: 0 8px 8px 0;
-    cursor: pointer; display: flex; align-items: center;
-    justify-content: center;
-    box-shadow: 3px 0 10px rgba(0,0,0,0.12);
-    transition: background 0.15s, width 0.15s;
-    padding: 18px 0; position: relative;
-  }
-  .sidebar-tab:hover, .sidebar-tab.active { background: #2563eb; width: 36px; }
-  .sidebar-tab-text {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    transform: rotate(180deg);
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.5px; white-space: nowrap;
-    user-select: none;
-  }
   /* Register panel uses same CSS as task panel */
   #register-panel {
     border-bottom: 2px solid var(--border);
@@ -592,11 +568,7 @@
     </div>
   </div>
   <!-- Two register tabs sticking out to the right -->
-  <div class="sidebar-tabs-col">
-    <div class="sidebar-tab" id="sidebar-tab-new" onmouseenter="openTabPanel('new')">
-      <span class="sidebar-tab-text">✏️ Neuer Auftrag</span>
-    </div>
-  </div>
+
   </div><!-- /sidebar-wrapper -->
 
   <div class="chat-main">
@@ -610,6 +582,7 @@
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
+        <button class="members-btn" id="sidebar-tab-new" onclick="openTabPanel('new')" style="font-weight:700">✏️ Auftrag</button>
         <button class="members-btn" onclick="exportCsv()" title="Als CSV exportieren">📊 CSV</button>
         <button class="members-btn" onclick="scrollToMembers()">👥 <span class="online-count" id="online-count">1</span></button>
       </div>
@@ -1535,7 +1508,8 @@ function renderRegisterPanel() {
 function openTaskModal() {
   const panel = document.getElementById('task-panel');
   if (panel.classList.contains('open')) return; // already open
-  document.getElementById('sidebar-tab-new')?.classList.add('active');
+  const tabBtn = document.getElementById('sidebar-tab-new');
+  if (tabBtn) { tabBtn.style.background = 'var(--accent)'; tabBtn.style.color = '#fff'; }
   taskAssigned=[];
   titleOrder=[];
   renderTitleChips();
@@ -1553,7 +1527,8 @@ function openTaskModal() {
 function closeTaskModal() {
   const panel = document.getElementById('task-panel');
   panel.classList.remove('open');
-  document.getElementById('sidebar-tab-new')?.classList.remove('active');
+  const tabBtn2 = document.getElementById('sidebar-tab-new');
+  if (tabBtn2) { tabBtn2.style.background = ''; tabBtn2.style.color = ''; }
   setTimeout(()=>{ if (!panel.classList.contains('open')) panel.style.display='none'; }, 400);
   editingTaskId = null;
   editingMsgId  = null;

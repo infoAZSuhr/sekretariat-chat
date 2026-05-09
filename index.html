@@ -1582,6 +1582,20 @@ function closeTaskModal() {
   editingTaskId = null;
   editingMsgId  = null;
 }
+
+function cancelTaskModal() {
+  closeTaskModal();
+  setTimeout(()=>{
+    taskAssigned = [];
+    titleOrder = [];
+    const p = document.getElementById('task-patient');
+    const d = document.getElementById('task-desc');
+    if (p) p.value = '';
+    if (d) d.value = '';
+    renderTitleChips();
+    updateTitlePreview();
+  }, 410);
+}
 function toggleAssign(uid,btn) {
   const i=taskAssigned.indexOf(uid);
   if(i>=0){taskAssigned.splice(i,1);btn.classList.remove('sel');}

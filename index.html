@@ -1001,6 +1001,43 @@ function onConnected() {
 
   // Rewind replays messages automatically via subscribe events — render after settling
   setTimeout(()=>{ messages['main'].sort((a,b)=>new Date(a.ts)-new Date(b.ts)); renderMessages(); }, 1200);
+
+  // Backfill: load ALL messages since today's local midnight via History API.
+  // Rewind only delivers up to ~1000; paginated history covers the full day.
+  loadTodayHistory(ch, 'main');
+}
+
+// Paginated history fetch back to today's local midnight, deduped into messages[roomId]
+function loadTodayHistory(ch, roomId) {
+  const d = new Date(); d.setHours(0,0,0,0);
+  const start = d.getTime();
+  if (!messages[roomId]) messages[roomId] = [];
+  const fetchPage = (pageOrParams, isFirst) => {
+    const cb = (err, page) => {
+      if (err || !page) return;
+      (page.items || []).forEach(item => {
+        if (!item || !item.data) return;
+        if (item.name === 'msg') {
+          if (!messages[roomId].find(m => m.id === item.data.id)) {
+            messages[roomId].push(item.data);
+            if (item.data.isTask && item.data.taskData) tasks[item.data.taskData.id] = item.data.taskData;
+          }
+        } else if (item.name === 'delete_msg' && item.data.msgId) {
+          messages[roomId] = messages[roomId].filter(m => m.id !== item.data.msgId);
+        } else if (item.name === 'task_update' && item.data.id) {
+          tasks[item.data.id] = { ...(tasks[item.data.id]||{}), ...item.data };
+        }
+      });
+      if (page.hasNext && page.hasNext()) {
+        page.next(cb);
+      } else {
+        messages[roomId].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+        renderMessages();
+      }
+    };
+    if (isFirst) ch.history(pageOrParams, cb);
+  };
+  fetchPage({ start, direction: 'forwards', limit: 100 }, true);
 }
 
 // --- History ------------------------------------------------------------------
@@ -1951,14 +1988,32 @@ window.onload=()=>{
   window.addEventListener('hashchange', handleVipHash);
 
   setupPWA();
-  // Clean messages older than 2h every 5 minutes
-  setInterval(()=>{
-    const cutoff = Date.now() - 2*60*60*1000;
+  // Daily clear: drop all messages older than today's local midnight.
+  // Manual deletion stays unaffected.
+  function startOfTodayMs() {
+    const d = new Date(); d.setHours(0,0,0,0); return d.getTime();
+  }
+  function purgeBeforeToday() {
+    const cutoff = startOfTodayMs();
     Object.keys(messages).forEach(room => {
-      messages[room] = (messages[room]||[]).filter(m => new Date(m.ts).getTime() > cutoff);
+      messages[room] = (messages[room]||[]).filter(m => new Date(m.ts).getTime() >= cutoff);
     });
     renderMessages();
-  }, 5*60*1000);
+  }
+  // Initial purge (covers messages replayed via Ably rewind from previous days)
+  purgeBeforeToday();
+  // Schedule a precise wake at next midnight, then repeat every 24h
+  function scheduleMidnightPurge() {
+    const next = new Date(); next.setHours(24,0,5,0); // 00:00:05 next day
+    const delay = next.getTime() - Date.now();
+    setTimeout(()=>{
+      purgeBeforeToday();
+      setInterval(purgeBeforeToday, 24*60*60*1000);
+    }, delay);
+  }
+  scheduleMidnightPurge();
+  // Safety net in case the tab was suspended across midnight (mobile / background)
+  setInterval(purgeBeforeToday, 5*60*1000);
   // Restore key from localStorage
   const savedKey = ABLY_KEY || localStorage.getItem('tc_apikey') || '';
   if (savedKey) {

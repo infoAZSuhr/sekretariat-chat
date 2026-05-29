@@ -90,24 +90,90 @@
   .consent input { margin-top: 3px; flex-shrink: 0; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
   .consent label { margin: 0; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; color: var(--text2); cursor: pointer; }
 
-  .cat-group {
-    display: flex; flex-direction: column; gap: 2px;
-    margin-top: 4px;
-  }
-  .cat-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 10px;
+  /* ── Multi-Select Dropdown mit Chips ── */
+  .ms-wrap { position: relative; margin-top: 4px; }
+  .ms-trigger {
+    width: 100%;
+    padding: 9px 36px 9px 10px;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 7px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-family: var(--font);
+    font-size: 14px;
+    color: var(--text);
+    text-align: left;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+    min-height: 44px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
+    position: relative;
+    transition: border-color 0.15s;
+    margin: 0;
   }
-  .cat-row:hover { border-color: var(--accent); background: #f8faff; }
-  .cat-row input { flex-shrink: 0; width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; margin: 0; }
-  .cat-row input:checked + span { font-weight: 600; color: var(--accent-dark); }
-  .cat-row:has(input:checked) { border-color: var(--accent); background: #eff4ff; }
-  .cat-row span { font-size: 13px; color: var(--text); line-height: 1.3; }
+  .ms-trigger:hover { border-color: var(--accent); background: var(--surface); }
+  .ms-trigger.open { border-color: var(--accent); }
+  .ms-trigger:disabled { opacity: 1; cursor: pointer; }
+  .ms-caret {
+    position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3); font-size: 12px;
+    transition: transform 0.15s;
+    pointer-events: none;
+  }
+  .ms-trigger.open .ms-caret { transform: translateY(-50%) rotate(180deg); }
+  .ms-placeholder { color: var(--text3); font-size: 14px; }
+  .ms-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #eff4ff;
+    color: var(--accent-dark);
+    border: 1px solid #c7d8ff;
+    border-radius: 6px;
+    padding: 2px 4px 2px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    max-width: 100%;
+  }
+  .ms-chip-x {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--accent-dark);
+    font-size: 14px;
+    transition: background 0.15s;
+  }
+  .ms-chip-x:hover { background: #c7d8ff; }
+  .ms-panel {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--accent);
+    border-radius: 9px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.10);
+    z-index: 50;
+    overflow: hidden;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .ms-opt {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 12px;
+    cursor: pointer;
+    border: none;
+    border-radius: 0;
+    margin: 0;
+    background: var(--surface);
+    transition: background 0.1s;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    color: var(--text);
+    font-size: 14px;
+  }
+  .ms-opt + .ms-opt { border-top: 1px solid #f0f1f3; }
+  .ms-opt:hover { background: #f8faff; }
+  .ms-opt input { flex-shrink: 0; width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; margin: 0; }
+  .ms-opt span { font-size: 14px; color: var(--text); line-height: 1.35; }
+  .ms-opt input:checked ~ span { color: var(--accent-dark); font-weight: 600; }
   .cat-error {
     display: none;
     font-size: 12px;
@@ -197,13 +263,19 @@
       <input id="f-mail" type="email" name="E-Mail" required autocomplete="email" maxlength="160">
 
       <label>Betreff<span class="req">*</span></label>
-      <div class="cat-group" id="cat-group">
-        <label class="cat-row"><input type="checkbox" name="kat" value="Anmeldung Informationsabend Diabetes mellitus" id="kat-info"><span>Anmeldung Informationsabend Diabetes mellitus</span></label>
-        <label class="cat-row"><input type="checkbox" name="kat" value="Terminvereinbarung"><span>Terminvereinbarung</span></label>
-        <label class="cat-row"><input type="checkbox" name="kat" value="Termin verschieben / absagen"><span>Termin verschieben / absagen</span></label>
-        <label class="cat-row"><input type="checkbox" name="kat" value="Rezept-/Medikamenten-Anfrage"><span>Rezept-/Medikamenten-Anfrage</span></label>
-        <label class="cat-row"><input type="checkbox" name="kat" value="Bitte um Rückruf"><span>Bitte um Rückruf</span></label>
-        <label class="cat-row"><input type="checkbox" name="kat" value="Allgemeine Frage"><span>Allgemeine Frage</span></label>
+      <div class="ms-wrap" id="ms-wrap">
+        <div class="ms-trigger" id="ms-trigger" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+          <span class="ms-chips" id="ms-chips"><span class="ms-placeholder">Bitte wählen…</span></span>
+          <span class="ms-caret">▾</span>
+        </div>
+        <div class="ms-panel" id="ms-panel" role="listbox" hidden>
+          <label class="ms-opt"><input type="checkbox" name="kat" value="Anmeldung Informationsabend Diabetes mellitus" id="kat-info"><span>Anmeldung Informationsabend Diabetes mellitus</span></label>
+          <label class="ms-opt"><input type="checkbox" name="kat" value="Terminvereinbarung"><span>Terminvereinbarung</span></label>
+          <label class="ms-opt"><input type="checkbox" name="kat" value="Termin verschieben / absagen"><span>Termin verschieben / absagen</span></label>
+          <label class="ms-opt"><input type="checkbox" name="kat" value="Rezept-/Medikamenten-Anfrage"><span>Rezept-/Medikamenten-Anfrage</span></label>
+          <label class="ms-opt"><input type="checkbox" name="kat" value="Bitte um Rückruf"><span>Bitte um Rückruf</span></label>
+          <label class="ms-opt"><input type="checkbox" name="kat" value="Allgemeine Frage"><span>Allgemeine Frage</span></label>
+        </div>
       </div>
       <div class="cat-error" id="cat-error">Bitte mindestens einen Betreff auswählen.</div>
 
@@ -276,20 +348,70 @@
     showForm();
   });
 
-  // Hide category-error when user picks one + Anliegen-Placeholder bei Infoabend tauschen
+  // ── Multi-Select Dropdown ──
+  const msWrap    = document.getElementById('ms-wrap');
+  const msTrigger = document.getElementById('ms-trigger');
+  const msPanel   = document.getElementById('ms-panel');
+  const msChips   = document.getElementById('ms-chips');
   const infoCheck = document.getElementById('kat-info');
   const msgInp    = document.getElementById('f-msg');
+
+  function openMs()  { msPanel.hidden = false; msTrigger.classList.add('open'); msTrigger.setAttribute('aria-expanded','true');  notifyParentHeight(); }
+  function closeMs() { msPanel.hidden = true;  msTrigger.classList.remove('open'); msTrigger.setAttribute('aria-expanded','false'); notifyParentHeight(); }
+  function toggleMs(){ msPanel.hidden ? openMs() : closeMs(); }
+
+  msTrigger.addEventListener('click', (e) => {
+    // Clicks on chip-x inside the trigger shouldn't toggle the panel
+    if (e.target.closest('.ms-chip-x')) return;
+    toggleMs();
+  });
+  msTrigger.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMs(); }
+    else if (e.key === 'Escape') closeMs();
+  });
+  document.addEventListener('click', (e) => {
+    if (!msWrap.contains(e.target)) closeMs();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMs(); });
+
+  function renderChips() {
+    const checked = Array.from(form.querySelectorAll('input[name="kat"]:checked'));
+    if (checked.length === 0) {
+      msChips.innerHTML = '<span class="ms-placeholder">Bitte wählen…</span>';
+      return;
+    }
+    msChips.innerHTML = checked.map(i => {
+      const v = i.value;
+      return '<span class="ms-chip">'
+        + escapeHtml(v)
+        + '<span class="ms-chip-x" data-val="'+escapeHtml(v)+'" title="Entfernen">×</span>'
+        + '</span>';
+    }).join('');
+    msChips.querySelectorAll('.ms-chip-x').forEach(x => {
+      x.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const v = x.dataset.val;
+        const cb = form.querySelector('input[name="kat"][value="'+CSS.escape(v)+'"]');
+        if (cb) { cb.checked = false; onCatsChanged(); }
+      });
+    });
+  }
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
   function refreshInfoExtra() {
     const ph = infoCheck.checked
       ? msgInp.dataset.infoPlaceholder
       : msgInp.dataset.defaultPlaceholder;
     msgInp.setAttribute('placeholder', ph);
+  }
+  function onCatsChanged() {
+    document.getElementById('cat-error').style.display = 'none';
+    renderChips();
+    refreshInfoExtra();
     notifyParentHeight();
   }
-  document.getElementById('cat-group').addEventListener('change', () => {
-    document.getElementById('cat-error').style.display = 'none';
-    refreshInfoExtra();
-  });
+  msPanel.addEventListener('change', onCatsChanged);
+  renderChips();
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -298,7 +420,7 @@
     const cats = Array.from(form.querySelectorAll('input[name="kat"]:checked')).map(i => i.value);
     if (cats.length === 0) {
       document.getElementById('cat-error').style.display = 'block';
-      document.getElementById('cat-group').scrollIntoView({behavior:'smooth', block:'center'});
+      document.getElementById('ms-wrap').scrollIntoView({behavior:'smooth', block:'center'});
       notifyParentHeight();
       return;
     }

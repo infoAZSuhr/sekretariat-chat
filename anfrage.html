@@ -6,6 +6,7 @@
 <meta name="robots" content="noindex" />
 <title>Anfrage – Augenzentrum Suhr</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://js.hcaptcha.com/1/api.js?render=explicit&onload=onHCaptchaLoad" async defer></script>
 <style>
   :root {
     --bg: transparent;
@@ -289,6 +290,10 @@
         </label>
       </div>
 
+      <!-- hCaptcha (Web3Forms-Default-Sitekey) -->
+      <div id="hc-container" style="margin-top:18px; display:flex; justify-content:center;"></div>
+      <div class="cat-error" id="hc-error" style="margin-top:6px">Bitte bestätigen Sie das Captcha.</div>
+
       <button id="f-submit" type="submit">Anfrage senden</button>
 
       <p class="small">
@@ -313,6 +318,27 @@
 </div>
 
 <script>
+// hCaptcha onload callback (must be global, before module IIFE)
+window.hcWidgetId = null;
+window.onHCaptchaLoad = function() {
+  try {
+    window.hcWidgetId = window.hcaptcha.render('hc-container', {
+      sitekey: '50b2fe65-b00b-4b9e-ad62-3ba471098be2', // Web3Forms-Default-Sitekey
+      theme: 'light',
+      size: 'normal',
+      callback: function() {
+        const e = document.getElementById('hc-error');
+        if (e) e.style.display = 'none';
+        if (window.azsNotifyHeight) window.azsNotifyHeight();
+      },
+      'expired-callback': function() {
+        // Token läuft nach ~2 Min ab — User muss erneut klicken
+      }
+    });
+    if (window.azsNotifyHeight) window.azsNotifyHeight();
+  } catch(err) { /* hCaptcha load failed — Submit funktioniert dann ohne Captcha-Token, Web3Forms lehnt ab */ }
+};
+
 (function(){
   const form    = document.getElementById('anfrage-form');
   const submit  = document.getElementById('f-submit');
@@ -321,6 +347,7 @@
   const errV    = document.getElementById('error-view');
   const errMsg  = document.getElementById('error-msg');
   const retry   = document.getElementById('retry-btn');
+  const hcError = document.getElementById('hc-error');
 
   function showError(msg) {
     formV.style.display = 'none';
@@ -345,6 +372,7 @@
   retry.addEventListener('click', () => {
     submit.disabled = false;
     submit.textContent = 'Anfrage senden';
+    try { if (window.hcaptcha && window.hcWidgetId !== null) window.hcaptcha.reset(window.hcWidgetId); } catch(_){}
     showForm();
   });
 
@@ -427,6 +455,21 @@
 
     if (!form.reportValidity()) return;
 
+    // hCaptcha-Token prüfen
+    let hcToken = '';
+    try {
+      if (window.hcaptcha && window.hcWidgetId !== null) {
+        hcToken = window.hcaptcha.getResponse(window.hcWidgetId) || '';
+      }
+    } catch(_){}
+    if (!hcToken) {
+      hcError.style.display = 'block';
+      document.getElementById('hc-container').scrollIntoView({behavior:'smooth', block:'center'});
+      notifyParentHeight();
+      return;
+    }
+    hcError.style.display = 'none';
+
     submit.disabled = true;
     submit.textContent = 'Wird gesendet…';
 
@@ -446,6 +489,7 @@
       from_name: name ? (name + ' – Anfrageformular Augenzentrum Suhr') : 'Augenzentrum Suhr – Anfrageformular',
       replyto: mail, // → "Antworten" geht direkt an den Anfragenden
       botcheck: botcheck,
+      'h-captcha-response': hcToken,
       // Sichtbare Felder in der Mail — Reihenfolge zählt
       'Betreff': cats.join(', '),
       'Name': name,
@@ -464,9 +508,12 @@
       if (res.ok && data.success) {
         showSuccess();
       } else {
+        // Captcha-Token ist nach Versand verbraucht — Reset für Retry
+        try { if (window.hcaptcha && window.hcWidgetId !== null) window.hcaptcha.reset(window.hcWidgetId); } catch(_){}
         showError(data && data.message ? data.message : 'Bitte versuchen Sie es nochmals oder rufen Sie uns direkt an.');
       }
     } catch (err) {
+      try { if (window.hcaptcha && window.hcWidgetId !== null) window.hcaptcha.reset(window.hcWidgetId); } catch(_){}
       showError('Verbindung fehlgeschlagen. Bitte versuchen Sie es nochmals oder rufen Sie uns direkt an.');
     }
   });
@@ -479,6 +526,7 @@
       window.parent.postMessage({ type: 'azs-anfrage-height', height: h }, '*');
     } catch(_){}
   }
+  window.azsNotifyHeight = notifyParentHeight; // für hCaptcha-onload-Callback
   window.addEventListener('load', notifyParentHeight);
   window.addEventListener('resize', notifyParentHeight);
   // Re-measure when content (textarea) grows

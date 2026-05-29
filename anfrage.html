@@ -311,6 +311,7 @@
     <h2>Vielen Dank!</h2>
     <p>Ihre Anfrage wurde übermittelt.</p>
     <p>Wir melden uns so bald wie möglich.</p>
+    <p class="small" style="margin-top:18px">Dieses Fenster schliesst sich automatisch …</p>
   </div>
 
   <div id="error-view" class="error" style="display:none">
@@ -365,6 +366,14 @@ window.onHCaptchaLoad = function() {
     errV.style.display = 'none';
     okV.style.display = '';
     notifyParentHeight();
+    // 3 Sek nach Erfolg: Tab schliessen versuchen, sonst auf Praxis-Site umleiten
+    setTimeout(() => {
+      try { window.close(); } catch(_){}
+      // Wenn close() blockiert war, läuft das Skript weiter — Fallback nach kurzer Pause
+      setTimeout(() => {
+        location.href = 'https://www.augenzentrum-suhr.ch/';
+      }, 250);
+    }, 3000);
   }
   function showForm() {
     formV.style.display = '';

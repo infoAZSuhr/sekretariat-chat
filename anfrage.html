@@ -90,6 +90,35 @@
   .consent input { margin-top: 3px; flex-shrink: 0; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
   .consent label { margin: 0; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; color: var(--text2); cursor: pointer; }
 
+  .cat-group {
+    display: flex; flex-direction: column; gap: 4px;
+    margin-top: 4px;
+  }
+  .cat-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .cat-row:hover { border-color: var(--accent); background: #f8faff; }
+  .cat-row input { margin-top: 2px; flex-shrink: 0; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .cat-row input:checked + span { font-weight: 600; color: var(--accent-dark); }
+  .cat-row:has(input:checked) { border-color: var(--accent); background: #eff4ff; }
+  .cat-row span { font-size: 14px; color: var(--text); line-height: 1.4; }
+  .cat-error {
+    display: none;
+    font-size: 12px;
+    color: var(--red);
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+  }
+
   /* Honeypot — hidden from humans, bots fill it */
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
@@ -167,6 +196,16 @@
       <label for="f-mail">E-Mail<span class="req">*</span></label>
       <input id="f-mail" type="email" name="E-Mail" required autocomplete="email" maxlength="160">
 
+      <label>Worum geht es?<span class="req">*</span></label>
+      <div class="cat-group" id="cat-group">
+        <label class="cat-row"><input type="checkbox" name="kat" value="Anmeldung Informationsabend Diabetes mellitus"><span>Anmeldung Informationsabend Diabetes mellitus</span></label>
+        <label class="cat-row"><input type="checkbox" name="kat" value="Terminvereinbarung"><span>Terminvereinbarung</span></label>
+        <label class="cat-row"><input type="checkbox" name="kat" value="Termin verschieben / absagen"><span>Termin verschieben / absagen</span></label>
+        <label class="cat-row"><input type="checkbox" name="kat" value="Rezept-/Medikamenten-Anfrage"><span>Rezept-/Medikamenten-Anfrage</span></label>
+        <label class="cat-row"><input type="checkbox" name="kat" value="Allgemeine Frage"><span>Allgemeine Frage</span></label>
+      </div>
+      <div class="cat-error" id="cat-error">Bitte mindestens eine Kategorie auswählen.</div>
+
       <label for="f-msg">Anliegen<span class="req">*</span></label>
       <textarea id="f-msg" name="Anliegen" required maxlength="2000" placeholder="Beschreiben Sie kurz Ihr Anliegen – ohne Gesundheitsdaten."></textarea>
 
@@ -236,16 +275,36 @@
     showForm();
   });
 
+  // Hide category-error when user picks one
+  document.getElementById('cat-group').addEventListener('change', () => {
+    document.getElementById('cat-error').style.display = 'none';
+    notifyParentHeight();
+  });
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // At least one category required
+    const cats = Array.from(form.querySelectorAll('input[name="kat"]:checked')).map(i => i.value);
+    if (cats.length === 0) {
+      document.getElementById('cat-error').style.display = 'block';
+      document.getElementById('cat-group').scrollIntoView({behavior:'smooth', block:'center'});
+      notifyParentHeight();
+      return;
+    }
+
     if (!form.reportValidity()) return;
 
     submit.disabled = true;
     submit.textContent = 'Wird gesendet…';
 
-    // Build JSON payload from form
+    // Build JSON payload — aggregate multi-checkboxes into one readable field
     const payload = {};
-    new FormData(form).forEach((v,k) => { payload[k] = v; });
+    new FormData(form).forEach((v,k) => {
+      if (k === 'kat') return; // skip; handled separately
+      payload[k] = v;
+    });
+    payload['Kategorien'] = cats.join(', ');
 
     try {
       const res = await fetch('https://api.web3forms.com/submit', {

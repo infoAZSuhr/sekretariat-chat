@@ -207,13 +207,8 @@
       </div>
       <div class="cat-error" id="cat-error">Bitte mindestens einen Betreff auswählen.</div>
 
-      <div id="info-extra" style="display:none">
-        <label for="f-anzahl">Anzahl Personen, die erscheinen werden<span class="req">*</span></label>
-        <input id="f-anzahl" type="number" name="Anzahl Personen" min="1" max="20" step="1" inputmode="numeric" placeholder="z.B. 2">
-      </div>
-
       <label for="f-msg">Anliegen<span class="req">*</span></label>
-      <textarea id="f-msg" name="Anliegen" required maxlength="2000" placeholder="Beschreiben Sie kurz Ihr Anliegen – ohne Gesundheitsdaten."></textarea>
+      <textarea id="f-msg" name="Anliegen" required maxlength="2000" placeholder="Beschreiben Sie kurz Ihr Anliegen – ohne Gesundheitsdaten." data-default-placeholder="Beschreiben Sie kurz Ihr Anliegen – ohne Gesundheitsdaten." data-info-placeholder="Bitte hier Anzahl Personen inkl. Begleitung eingeben."></textarea>
 
       <div class="consent">
         <input id="f-consent" type="checkbox" required>
@@ -281,19 +276,14 @@
     showForm();
   });
 
-  // Hide category-error when user picks one + toggle Informationsabend-Extrafeld
-  const infoBox    = document.getElementById('info-extra');
-  const infoCheck  = document.getElementById('kat-info');
-  const anzahlInp  = document.getElementById('f-anzahl');
+  // Hide category-error when user picks one + Anliegen-Placeholder bei Infoabend tauschen
+  const infoCheck = document.getElementById('kat-info');
+  const msgInp    = document.getElementById('f-msg');
   function refreshInfoExtra() {
-    if (infoCheck.checked) {
-      infoBox.style.display = '';
-      anzahlInp.required = true;
-    } else {
-      infoBox.style.display = 'none';
-      anzahlInp.required = false;
-      anzahlInp.value = '';
-    }
+    const ph = infoCheck.checked
+      ? msgInp.dataset.infoPlaceholder
+      : msgInp.dataset.defaultPlaceholder;
+    msgInp.setAttribute('placeholder', ph);
     notifyParentHeight();
   }
   document.getElementById('cat-group').addEventListener('change', () => {

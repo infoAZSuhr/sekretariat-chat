@@ -90,6 +90,9 @@
   }
   .consent input { margin-top: 3px; flex-shrink: 0; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
   .consent label { margin: 0; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; color: var(--text2); cursor: pointer; }
+  .consent a { color: var(--accent); text-decoration: underline; }
+  .consent a:hover { color: var(--accent-dark); }
+  .small a:hover { color: var(--accent-dark); }
 
   /* ── Multi-Select Dropdown mit Chips ── */
   .ms-wrap { position: relative; margin-top: 4px; }
@@ -286,7 +289,7 @@
       <div class="consent">
         <input id="f-consent" type="checkbox" required>
         <label for="f-consent">
-          Ich bin damit einverstanden, dass meine Angaben zur Bearbeitung meiner Anfrage gespeichert und per E-Mail an das Sekretariat übermittelt werden.
+          Ich bin damit einverstanden, dass meine Angaben zur Bearbeitung meiner Anfrage gespeichert und per E-Mail an das Sekretariat übermittelt werden. Es gilt unsere <a href="https://www.augenzentrum-suhr.ch/datenschutzerklaerung" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</a>.
         </label>
       </div>
 
@@ -297,7 +300,8 @@
       <button id="f-submit" type="submit">Anfrage senden</button>
 
       <p class="small">
-        Spam-Schutz aktiv. Übermittlung verschlüsselt (HTTPS). Keine Weitergabe an Dritte.
+        Spam-Schutz aktiv. Übermittlung verschlüsselt (HTTPS). Keine Weitergabe an Dritte.<br>
+        <a href="https://www.augenzentrum-suhr.ch/datenschutzerklaerung" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Datenschutzerklärung</a>
       </p>
     </form>
   </div>

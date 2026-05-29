@@ -196,16 +196,21 @@
       <label for="f-mail">E-Mail<span class="req">*</span></label>
       <input id="f-mail" type="email" name="E-Mail" required autocomplete="email" maxlength="160">
 
-      <label>Worum geht es?<span class="req">*</span></label>
+      <label>Betreff<span class="req">*</span></label>
       <div class="cat-group" id="cat-group">
-        <label class="cat-row"><input type="checkbox" name="kat" value="Anmeldung Informationsabend Diabetes mellitus"><span>Anmeldung Informationsabend Diabetes mellitus</span></label>
+        <label class="cat-row"><input type="checkbox" name="kat" value="Anmeldung Informationsabend Diabetes mellitus" id="kat-info"><span>Anmeldung Informationsabend Diabetes mellitus</span></label>
         <label class="cat-row"><input type="checkbox" name="kat" value="Terminvereinbarung"><span>Terminvereinbarung</span></label>
         <label class="cat-row"><input type="checkbox" name="kat" value="Termin verschieben / absagen"><span>Termin verschieben / absagen</span></label>
         <label class="cat-row"><input type="checkbox" name="kat" value="Rezept-/Medikamenten-Anfrage"><span>Rezept-/Medikamenten-Anfrage</span></label>
         <label class="cat-row"><input type="checkbox" name="kat" value="Bitte um Rückruf"><span>Bitte um Rückruf</span></label>
         <label class="cat-row"><input type="checkbox" name="kat" value="Allgemeine Frage"><span>Allgemeine Frage</span></label>
       </div>
-      <div class="cat-error" id="cat-error">Bitte mindestens eine Kategorie auswählen.</div>
+      <div class="cat-error" id="cat-error">Bitte mindestens einen Betreff auswählen.</div>
+
+      <div id="info-extra" style="display:none">
+        <label for="f-anzahl">Anzahl Personen, die erscheinen werden<span class="req">*</span></label>
+        <input id="f-anzahl" type="number" name="Anzahl Personen" min="1" max="20" step="1" inputmode="numeric" placeholder="z.B. 2">
+      </div>
 
       <label for="f-msg">Anliegen<span class="req">*</span></label>
       <textarea id="f-msg" name="Anliegen" required maxlength="2000" placeholder="Beschreiben Sie kurz Ihr Anliegen – ohne Gesundheitsdaten."></textarea>
@@ -276,16 +281,30 @@
     showForm();
   });
 
-  // Hide category-error when user picks one
+  // Hide category-error when user picks one + toggle Informationsabend-Extrafeld
+  const infoBox    = document.getElementById('info-extra');
+  const infoCheck  = document.getElementById('kat-info');
+  const anzahlInp  = document.getElementById('f-anzahl');
+  function refreshInfoExtra() {
+    if (infoCheck.checked) {
+      infoBox.style.display = '';
+      anzahlInp.required = true;
+    } else {
+      infoBox.style.display = 'none';
+      anzahlInp.required = false;
+      anzahlInp.value = '';
+    }
+    notifyParentHeight();
+  }
   document.getElementById('cat-group').addEventListener('change', () => {
     document.getElementById('cat-error').style.display = 'none';
-    notifyParentHeight();
+    refreshInfoExtra();
   });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // At least one category required
+    // At least one Betreff required
     const cats = Array.from(form.querySelectorAll('input[name="kat"]:checked')).map(i => i.value);
     if (cats.length === 0) {
       document.getElementById('cat-error').style.display = 'block';
@@ -299,13 +318,15 @@
     submit.disabled = true;
     submit.textContent = 'Wird gesendet…';
 
-    // Build JSON payload — aggregate multi-checkboxes into one readable field
+    // Build JSON payload — aggregate multi-checkboxes into one readable "Betreff" field
     const payload = {};
     new FormData(form).forEach((v,k) => {
       if (k === 'kat') return; // skip; handled separately
       payload[k] = v;
     });
-    payload['Kategorien'] = cats.join(', ');
+    payload['Betreff'] = cats.join(', ');
+    // Use the chosen Betreff as the actual email subject line
+    payload['subject'] = 'Anfrage: ' + cats.join(', ');
 
     try {
       const res = await fetch('https://api.web3forms.com/submit', {

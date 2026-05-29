@@ -308,15 +308,29 @@
     submit.disabled = true;
     submit.textContent = 'Wird gesendet…';
 
-    // Build JSON payload — aggregate multi-checkboxes into one readable "Betreff" field
-    const payload = {};
-    new FormData(form).forEach((v,k) => {
-      if (k === 'kat') return; // skip; handled separately
-      payload[k] = v;
-    });
-    payload['Betreff'] = cats.join(', ');
-    // Use the chosen Betreff as the actual email subject line
-    payload['subject'] = 'Anfrage: ' + cats.join(', ');
+    // Read raw form values
+    const fd = new FormData(form);
+    const name    = fd.get('Name') || '';
+    const tel     = fd.get('Telefon') || '';
+    const mail    = fd.get('E-Mail') || '';
+    const anliegen= fd.get('Anliegen') || '';
+    const botcheck= fd.get('botcheck') || '';
+
+    // Explicit order: Betreff → Name → Telefon → E-Mail → Anliegen
+    const payload = {
+      access_key: fd.get('access_key'),
+      // Mail-Header-Felder (technisch, erscheinen nicht im Body)
+      subject: 'Anfrage: ' + cats.join(', '),
+      from_name: name ? (name + ' – Anfrageformular Augenzentrum Suhr') : 'Augenzentrum Suhr – Anfrageformular',
+      replyto: mail, // → "Antworten" geht direkt an den Anfragenden
+      botcheck: botcheck,
+      // Sichtbare Felder in der Mail — Reihenfolge zählt
+      'Betreff': cats.join(', '),
+      'Name': name,
+      'Telefon': tel,
+      'E-Mail': mail,
+      'Anliegen': anliegen
+    };
 
     try {
       const res = await fetch('https://api.web3forms.com/submit', {

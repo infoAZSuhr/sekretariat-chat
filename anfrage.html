@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<title>Anfrage – Augenzentrum Suhr</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: transparent;
+    --surface: #ffffff;
+    --surface2: #f3f4f6;
+    --border: #d1d5db;
+    --accent: #2563eb;
+    --accent-dark: #1d4ed8;
+    --text: #111827;
+    --text2: #4b5563;
+    --text3: #9ca3af;
+    --green: #16a34a;
+    --red: #dc2626;
+    --yellow-bg: #fef3c7;
+    --yellow-border: #fcd34d;
+    --yellow-text: #78350f;
+    --font: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.5; }
+  body { padding: 16px; }
+
+  .wrap {
+    max-width: 560px; margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .sub { font-size: 14px; color: var(--text2); margin-bottom: 20px; }
+
+  .notice {
+    background: var(--yellow-bg);
+    border: 1px solid var(--yellow-border);
+    color: var(--yellow-text);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    line-height: 1.55;
+  }
+  .notice b { font-weight: 700; }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    margin: 14px 0 6px;
+  }
+  .req { color: var(--red); margin-left: 2px; }
+
+  input[type=text], input[type=tel], input[type=email], textarea {
+    width: 100%;
+    padding: 11px 13px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-family: var(--font);
+    font-size: 15px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  textarea { min-height: 120px; resize: vertical; }
+
+  .consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 18px;
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+  .consent input { margin-top: 3px; flex-shrink: 0; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .consent label { margin: 0; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; color: var(--text2); cursor: pointer; }
+
+  /* Honeypot — hidden from humans, bots fill it */
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  button {
+    width: 100%;
+    margin-top: 22px;
+    padding: 13px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s, opacity 0.15s;
+  }
+  button:hover:not(:disabled) { background: var(--accent-dark); box-shadow: 0 4px 14px rgba(37,99,235,0.25); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .small {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 16px;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .success, .error {
+    text-align: center;
+    padding: 30px 10px;
+  }
+  .success .icon { font-size: 48px; margin-bottom: 14px; }
+  .success h2 { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+  .success p { font-size: 14px; color: var(--text2); margin-bottom: 6px; }
+  .error .icon { font-size: 40px; color: var(--red); margin-bottom: 10px; }
+  .error h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--red); }
+  .error p { font-size: 14px; color: var(--text2); margin-bottom: 16px; }
+  .error button { background: var(--surface2); color: var(--text); }
+  .error button:hover:not(:disabled) { background: var(--border); box-shadow: none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div id="form-view">
+    <h1>Anfrage ans Sekretariat</h1>
+    <p class="sub">Schreiben Sie uns Ihr Anliegen — wir melden uns so bald wie möglich.</p>
+
+    <div class="notice">
+      <b>Wichtig:</b> Bitte <b>keine medizinischen Notfälle</b> über dieses Formular.
+      Bei einem Notfall wählen Sie die <b>144</b>.
+      Senden Sie zudem <b>keine Gesundheitsdaten oder Diagnosen</b> — wir geben hier keine medizinischen Auskünfte.
+    </div>
+
+    <form id="anfrage-form" novalidate>
+      <!-- Web3Forms access key -->
+      <input type="hidden" name="access_key" value="DEIN-WEB3FORMS-ACCESS-KEY">
+      <!-- Custom subject for incoming emails -->
+      <input type="hidden" name="subject" value="Neue Anfrage über Website – Augenzentrum Suhr">
+      <input type="hidden" name="from_name" value="Augenzentrum Suhr – Anfrageformular">
+
+      <!-- Honeypot (Web3Forms native, hidden from humans) -->
+      <div class="hp" aria-hidden="true">
+        <label>Lassen Sie dieses Feld leer</label>
+        <input type="text" name="botcheck" tabindex="-1" autocomplete="off">
+      </div>
+
+      <label for="f-name">Name<span class="req">*</span></label>
+      <input id="f-name" type="text" name="Name" required autocomplete="name" maxlength="120">
+
+      <label for="f-tel">Telefon<span class="req">*</span></label>
+      <input id="f-tel" type="tel" name="Telefon" required autocomplete="tel" maxlength="60" inputmode="tel">
+
+      <label for="f-mail">E-Mail<span class="req">*</span></label>
+      <input id="f-mail" type="email" name="E-Mail" required autocomplete="email" maxlength="160">
+
+      <label for="f-msg">Anliegen<span class="req">*</span></label>
+      <textarea id="f-msg" name="Anliegen" required maxlength="2000" placeholder="Beschreiben Sie kurz Ihr Anliegen – ohne Gesundheitsdaten."></textarea>
+
+      <div class="consent">
+        <input id="f-consent" type="checkbox" required>
+        <label for="f-consent">
+          Ich bin damit einverstanden, dass meine Angaben zur Bearbeitung meiner Anfrage gespeichert und per E-Mail an das Sekretariat übermittelt werden.
+        </label>
+      </div>
+
+      <button id="f-submit" type="submit">Anfrage senden</button>
+
+      <p class="small">
+        Spam-Schutz aktiv. Übermittlung verschlüsselt (HTTPS). Keine Weitergabe an Dritte.
+      </p>
+    </form>
+  </div>
+
+  <div id="success-view" class="success" style="display:none">
+    <div class="icon">✅</div>
+    <h2>Vielen Dank!</h2>
+    <p>Ihre Anfrage wurde übermittelt.</p>
+    <p>Wir melden uns so bald wie möglich.</p>
+  </div>
+
+  <div id="error-view" class="error" style="display:none">
+    <div class="icon">⚠️</div>
+    <h2>Übermittlung fehlgeschlagen</h2>
+    <p id="error-msg">Bitte versuchen Sie es nochmals oder rufen Sie uns direkt an.</p>
+    <button type="button" id="retry-btn">Nochmals versuchen</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const form    = document.getElementById('anfrage-form');
+  const submit  = document.getElementById('f-submit');
+  const formV   = document.getElementById('form-view');
+  const okV     = document.getElementById('success-view');
+  const errV    = document.getElementById('error-view');
+  const errMsg  = document.getElementById('error-msg');
+  const retry   = document.getElementById('retry-btn');
+
+  function showError(msg) {
+    formV.style.display = 'none';
+    okV.style.display = 'none';
+    errV.style.display = '';
+    if (msg) errMsg.textContent = msg;
+    notifyParentHeight();
+  }
+  function showSuccess() {
+    formV.style.display = 'none';
+    errV.style.display = 'none';
+    okV.style.display = '';
+    notifyParentHeight();
+  }
+  function showForm() {
+    formV.style.display = '';
+    okV.style.display = 'none';
+    errV.style.display = 'none';
+    notifyParentHeight();
+  }
+
+  retry.addEventListener('click', () => {
+    submit.disabled = false;
+    submit.textContent = 'Anfrage senden';
+    showForm();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!form.reportValidity()) return;
+
+    submit.disabled = true;
+    submit.textContent = 'Wird gesendet…';
+
+    // Build JSON payload from form
+    const payload = {};
+    new FormData(form).forEach((v,k) => { payload[k] = v; });
+
+    try {
+      const res = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        showSuccess();
+      } else {
+        showError(data && data.message ? data.message : 'Bitte versuchen Sie es nochmals oder rufen Sie uns direkt an.');
+      }
+    } catch (err) {
+      showError('Verbindung fehlgeschlagen. Bitte versuchen Sie es nochmals oder rufen Sie uns direkt an.');
+    }
+  });
+
+  // ── Iframe auto-height: post height to parent on changes ─────────────
+  function notifyParentHeight() {
+    if (window.parent === window) return;
+    try {
+      const h = document.documentElement.scrollHeight;
+      window.parent.postMessage({ type: 'azs-anfrage-height', height: h }, '*');
+    } catch(_){}
+  }
+  window.addEventListener('load', notifyParentHeight);
+  window.addEventListener('resize', notifyParentHeight);
+  // Re-measure when content (textarea) grows
+  document.getElementById('f-msg').addEventListener('input', () => setTimeout(notifyParentHeight, 50));
+})();
+</script>
+</body>
+</html>

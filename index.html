@@ -976,12 +976,25 @@ function joinChat() {
   localStorage.setItem('tc_me', JSON.stringify({color: me.color, name: me.name}));
 
   ably = new Ably.Realtime({ key, clientId: me.id });
-  ably.connection.on('connected', onConnected);
-  ably.connection.on('failed', ()=>{
-    toast('Verbindung fehlgeschlagen — API-Key prüfen');
-    document.getElementById('join-btn').disabled=false;
-    document.getElementById('join-btn').textContent='Beitreten ->';
-  });
+
+  let resolved = false;
+  function resetJoinBtn(msg) {
+    if (resolved) return; resolved = true;
+    clearTimeout(joinWatchdog);
+    if (msg) toast(msg);
+    document.getElementById('join-btn').disabled = false;
+    document.getElementById('join-btn').textContent = 'Beitreten →';
+    try { ably?.close(); } catch(_){}
+  }
+
+  ably.connection.on('connected', () => { resolved = true; clearTimeout(joinWatchdog); onConnected(); });
+  ably.connection.on('failed', () => resetJoinBtn('Verbindung fehlgeschlagen — API-Key prüfen'));
+  ably.connection.on('suspended', () => resetJoinBtn('Keine Verbindung — Internet/Firewall prüfen'));
+
+  // Watchdog: 15 Sek ohne erfolgreichen Connect → zurück zum Setup-Screen mit Hinweis
+  const joinWatchdog = setTimeout(() => {
+    if (!resolved) resetJoinBtn('Verbindung dauert zu lange — bitte erneut versuchen oder API-Key prüfen');
+  }, 15000);
 }
 
 function onConnected() {

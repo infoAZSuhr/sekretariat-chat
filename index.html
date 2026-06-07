@@ -973,7 +973,7 @@ function joinChat() {
   // Restore color if we have it (avatar = initials from current name, not saved)
   try { const s=JSON.parse(localStorage.getItem('tc_me')||'{}'); if(s.color) me.color=s.color; } catch(e){}
   localStorage.setItem('tc_uid', me.id);
-  localStorage.setItem('tc_me', JSON.stringify({color: me.color}));
+  localStorage.setItem('tc_me', JSON.stringify({color: me.color, name: me.name}));
 
   ably = new Ably.Realtime({ key, clientId: me.id });
   ably.connection.on('connected', onConnected);
@@ -2219,9 +2219,26 @@ window.onload=()=>{
     }
   }
   // Restore saved name
-  try{ const s=JSON.parse(localStorage.getItem('tc_me')||'{}'); if(s.name) document.getElementById('inp-name').value=s.name; }catch(e){}
-  // Auto-focus name field
-  setTimeout(()=>document.getElementById('inp-name').focus(), 100);
+  let savedName = '';
+  try{ const s=JSON.parse(localStorage.getItem('tc_me')||'{}'); if(s.name){ savedName = s.name; document.getElementById('inp-name').value=s.name; } }catch(e){}
+
+  // Auto-Login: Wenn Name + Key gespeichert sind, direkt verbinden ohne Klick
+  const haveKey = !!(ABLY_KEY || localStorage.getItem('tc_apikey'));
+  if (savedName && haveKey) {
+    document.getElementById('join-btn').textContent = 'Verbinde…';
+    document.getElementById('join-btn').disabled = true;
+    setTimeout(() => { try { joinChat(); } catch(_){
+      document.getElementById('join-btn').disabled = false;
+      document.getElementById('join-btn').textContent = 'Beitreten →';
+      document.getElementById('inp-name').focus();
+    } }, 50);
+  } else {
+    // Sonst Fokus aufs Name-Feld (oder Key-Feld wenn Name schon da, Key fehlt)
+    setTimeout(()=>{
+      if (savedName && !haveKey) document.getElementById('inp-key').focus();
+      else document.getElementById('inp-name').focus();
+    }, 100);
+  }
 };
 </script>
 </body>

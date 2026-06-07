@@ -1012,39 +1012,45 @@ function onConnected() {
   // ── Presence via Ably Presence API ──
   presenceChannel = ably.channels.get(CHANNEL_ID + ':presence');
 
-  function syncPresence() {
-    presenceChannel.presence.get((err, mbs) => {
-      if (err) return;
+  async function syncPresence() {
+    try {
+      const mbs = await presenceChannel.presence.get();
       Object.values(members).forEach(m => m.online = false);
       if (mbs) mbs.forEach(m => { if (m.clientId !== me.id) addMember({id:m.clientId,...m.data}); });
       renderSidebar();
-    });
+    } catch(_) {}
   }
 
   presenceChannel.presence.subscribe('enter',  m=>{ addMember({id:m.clientId,...m.data}); renderSidebar(); });
   presenceChannel.presence.subscribe('leave',  m=>{ if(members[m.clientId]) members[m.clientId].online=false; renderSidebar(); });
   presenceChannel.presence.subscribe('update', m=>{ addMember({id:m.clientId,...m.data}); renderSidebar(); });
 
-  // Check for duplicate name before entering presence
-  presenceChannel.presence.get((err, existing) => {
-    if (!err && existing) {
-      const nameLower = me.name.toLowerCase();
-      const duplicate = existing.find(m => m.clientId !== me.id && m.data?.name?.toLowerCase() === nameLower);
-      if (duplicate) {
-        ably.close();
-        document.getElementById('join-btn').disabled = false;
-        document.getElementById('join-btn').textContent = 'Beitreten →';
-        toast('⚠️ "' + me.name + '" ist bereits online — bitte anderen Namen wählen');
-        return;
+  // Check for duplicate name before entering presence (Ably v2: Promise-API)
+  (async () => {
+    try {
+      const existing = await presenceChannel.presence.get();
+      if (existing) {
+        const nameLower = me.name.toLowerCase();
+        const duplicate = existing.find(m => m.clientId !== me.id && m.data?.name?.toLowerCase() === nameLower);
+        if (duplicate) {
+          ably.close();
+          document.getElementById('setup-screen').style.display = '';
+          document.getElementById('app').classList.remove('visible');
+          document.getElementById('join-btn').disabled = false;
+          document.getElementById('join-btn').textContent = 'Beitreten →';
+          toast('⚠️ "' + me.name + '" ist bereits online — bitte anderen Namen wählen');
+          return;
+        }
       }
-    }
-    presenceChannel.presence.enter({name:me.name,avatar:me.avatar,color:me.color}, ()=>{
+      await presenceChannel.presence.enter({name:me.name,avatar:me.avatar,color:me.color});
       syncPresence();
       setTimeout(syncPresence, 1500);
       setTimeout(syncPresence, 4000);
       setInterval(syncPresence, 30000);
-    });
-  });
+    } catch (e) {
+      console.error('Presence-Fehler', e);
+    }
+  })();
 
   // ── Ping system: broadcast own info + ask others to respond ──
   ch.subscribe('ping', e => {
@@ -1105,13 +1111,14 @@ function onConnected() {
 }
 
 // Paginated history fetch back to today's local midnight, deduped into messages[roomId]
-function loadTodayHistory(ch, roomId) {
+// Ably v2: Promise-API (await page.next())
+async function loadTodayHistory(ch, roomId) {
   const d = new Date(); d.setHours(0,0,0,0);
   const start = d.getTime();
   if (!messages[roomId]) messages[roomId] = [];
-  const fetchPage = (pageOrParams, isFirst) => {
-    const cb = (err, page) => {
-      if (err || !page) return;
+  try {
+    let page = await ch.history({ start, direction: 'forwards', limit: 100 });
+    while (page) {
       (page.items || []).forEach(item => {
         if (!item || !item.data) return;
         if (item.name === 'msg') {
@@ -1125,23 +1132,20 @@ function loadTodayHistory(ch, roomId) {
           tasks[item.data.id] = { ...(tasks[item.data.id]||{}), ...item.data };
         }
       });
-      if (page.hasNext && page.hasNext()) {
-        page.next(cb);
-      } else {
-        messages[roomId].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
-        renderMessages();
-      }
-    };
-    if (isFirst) ch.history(pageOrParams, cb);
-  };
-  fetchPage({ start, direction: 'forwards', limit: 100 }, true);
+      page = (page.hasNext && page.hasNext()) ? await page.next() : null;
+    }
+    messages[roomId].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+    renderMessages();
+  } catch (e) {
+    console.error('History-Fehler', e);
+  }
 }
 
 // --- History ------------------------------------------------------------------
-function loadHistory(ch, roomId, done) {
+async function loadHistory(ch, roomId, done) {
   // Rewind is used for main channel — this is kept for DM rooms
-  ch.history({ limit: 50, direction: 'backwards' }, (err, page) => {
-    if (err) { done(); return; }
+  try {
+    const page = await ch.history({ limit: 50, direction: 'backwards' });
     const items = page ? (page.items || []).reverse() : [];
     items.forEach(item => {
       if (item.name === 'msg' && item.data) {
@@ -1153,8 +1157,8 @@ function loadHistory(ch, roomId, done) {
       }
     });
     if (messages[roomId]) messages[roomId].sort((a,b)=>new Date(a.ts)-new Date(b.ts));
-    done();
-  });
+  } catch (_) {}
+  done();
 }
 
 // --- Members ------------------------------------------------------------------
@@ -2107,7 +2111,9 @@ function setupPWA() {
 
   // Register service worker — auto-reload on update
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.includes('claudeusercontent')) {
-    navigator.serviceWorker.register('/sw.js').then(reg => {
+    // SW liegt im selben Verzeichnis wie diese HTML — relativer Pfad statt /sw.js
+    // (sonst 404 auf GitHub Pages unter /sekretariat-chat/)
+    navigator.serviceWorker.register('sw.js').then(reg => {
       console.log('SW registered');
       // New SW waiting → skip waiting → reload all clients
       reg.addEventListener('updatefound', () => {

@@ -67,6 +67,20 @@
   .setup-btn:hover { background: #2563eb; box-shadow: 0 4px 20px rgba(59,130,246,0.35); }
   .setup-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 
+  /* ── Room Picker ── */
+  #room-screen {
+    display: none; align-items: center; justify-content: center; height: 100vh;
+    background: radial-gradient(ellipse at 30% 50%, rgba(59,130,246,0.06) 0%, transparent 60%), var(--bg);
+  }
+  #room-screen.visible { display: flex; }
+  .room-choice-btn { width: 100%; padding: 13px; background: var(--surface2); color: var(--text);
+    border: 1.5px solid var(--border); border-radius: 10px; font-family: var(--font);
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 10px; }
+  .room-choice-btn:hover { border-color: var(--accent); background: var(--accent-glow); }
+  .change-room-link { background: none; border: none; color: var(--text3); font-size: 11px;
+    cursor: pointer; padding: 0; font-family: var(--font); text-decoration: underline; }
+
   /* ── App Layout ── */
   #app { display: none; height: 100vh; }
   #app.visible { display: flex; }
@@ -605,6 +619,18 @@
   </div>
 </div>
 
+<!-- ── Room Picker ── -->
+<div id="room-screen">
+  <div class="setup-card">
+    <span class="setup-logo">📍</span>
+    <div class="setup-title">Wo bist du?</div>
+    <div class="setup-sub">Wird auf diesem Gerät gespeichert — über "Zimmer wechseln" später änderbar.</div>
+    <button class="room-choice-btn" onclick="chooseRoom('sekretariat')"><span style="font-size:18px">🗂️</span> Sekretariat</button>
+    <button class="room-choice-btn" onclick="chooseRoom('u1')"><span style="font-size:18px">🚪</span> U1</button>
+    <button class="room-choice-btn" onclick="chooseRoom('u2')"><span style="font-size:18px">🚪</span> U2</button>
+  </div>
+</div>
+
 <!-- ── App ── -->
 <div id="app">
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
@@ -617,14 +643,13 @@
         <div class="me-name" id="me-name-display"></div>
         <div class="me-online"></div>
       </div>
+      <div style="text-align:center;margin-top:6px">
+        <button class="change-room-link" onclick="switchRoomPrompt()">Zimmer wechseln</button>
+      </div>
     </div>
     <div class="sidebar-scroll">
       <div class="sidebar-sec-title">Kanal</div>
-      <div class="sidebar-item active" id="main-channel-item" onclick="showMainChannel()">
-        <span style="font-size:16px">🗂️</span>
-        <span class="item-name">Sekretariat</span>
-        <span class="unread-badge" id="main-unread" style="display:none"></span>
-      </div>
+      <div id="channel-nav"></div>
       <div class="sidebar-sec-title" style="margin-top:8px">Online</div>
       <div id="members-list"></div>
 
@@ -791,11 +816,31 @@ const COLORS  = ['#4f46e5','#7c3aed','#db2777','#dc2626','#d97706','#059669','#0
 
 // --- State --------------------------------------------------------------------
 let ably, me, presenceChannel;
+let myRole     = null; // 'sekretariat' | 'u1' | 'u2'
 let activeRoom = 'main';
 let messages   = { main: [] };
 let tasks      = {};
 let members    = {};
 let unread     = {};
+
+// Zimmer-Kanaele: U1/U2 sind private Leitungen zwischen jeweiligem Zimmer und
+// Sekretariat, isoliert voneinander. navId/unreadId muessen zu den per
+// renderChannelNav() erzeugten Sidebar-Elementen passen.
+const ROOM_META = {
+  main: { icon: '🗂️', navId: 'main-channel-item', unreadId: 'main-unread' },
+  u1:   { icon: '🚪', navId: 'u1-channel-item',   unreadId: 'u1-unread' },
+  u2:   { icon: '🚪', navId: 'u2-channel-item',   unreadId: 'u2-unread' },
+};
+// Sekretariat sieht Raeume unter ihrem echten Namen (U1/U2); wer selbst im
+// Zimmer sitzt, sieht seine private Leitung als "Sekretariat" beschriftet.
+function roomTitle(key) {
+  if (key === 'main') return 'Sekretariat';
+  return myRole === 'sekretariat' ? key.toUpperCase() : 'Sekretariat';
+}
+function roomSub(key) {
+  if (key === 'main') return 'Interner Kanal';
+  return myRole === 'sekretariat' ? ('Privat mit ' + key.toUpperCase()) : 'Privat mit Sekretariat';
+}
 let typingUsers = {};
 let replyTo    = null;
 let taskAssigned = [];
@@ -920,7 +965,7 @@ function showNotif(msg, roomId) {
       <div class="notif-avatar" style="background:${msg.color}">${msg.avatar}</div>
       <div>
         <div class="notif-name">${msg.userName}${mentionTag}</div>
-        <div class="notif-room">#AZS Intern</div>
+        <div class="notif-room">${ROOM_META[roomId] ? '#' + roomTitle(roomId) : '#AZS Intern'}</div>
       </div>
       <button class="notif-close" onclick="event.stopPropagation();dismissNotif(this.closest('.notif-popup'))">✕</button>
     </div>
@@ -928,7 +973,7 @@ function showNotif(msg, roomId) {
 
   popup.addEventListener('click', () => {
     window.focus();
-    if (roomId==='main') showMainChannel();
+    if (ROOM_META[roomId]) showRoom(roomId);
     dismissNotif(popup);
   });
 
@@ -1003,7 +1048,7 @@ function onConnected() {
   ch.subscribe('msg',         e=>onMessage('main',e.data));
   ch.subscribe('reaction',    e=>onReaction('main',e.data));
   ch.subscribe('task_update', e=>onTaskUpdate(e.data));
-  ch.subscribe('delete_msg',  e=>onDeleteMsg(e.data));
+  ch.subscribe('delete_msg',  e=>onDeleteMsg('main',e.data));
 
   // Typing on separate channel without rewind (old messages irrelevant)
   const chTyping = ably.channels.get(mainAblyId() + '_typing');
@@ -1092,7 +1137,6 @@ function onConnected() {
   }, 3000);
 
   document.getElementById('setup-screen').style.display='none';
-  document.getElementById('app').classList.add('visible');
   requestNotifPermission();
   initAudio(); // init on user gesture
   document.getElementById('me-avatar').textContent=me.avatar;
@@ -1102,12 +1146,57 @@ function onConnected() {
     document.getElementById('send-btn').disabled=!document.getElementById('msg-input').value.trim();
   });
 
+  // Zimmer/Rolle (Sekretariat/U1/U2) einmalig pro Geraet waehlen lassen,
+  // danach automatisch aus localStorage uebernehmen.
+  myRole = localStorage.getItem('tc_room');
+  if (!myRole) {
+    document.getElementById('room-screen').classList.add('visible');
+  } else {
+    subscribeRoomChannels();
+    document.getElementById('app').classList.add('visible');
+    renderChannelNav();
+    showRoom('main');
+  }
+
   // Rewind replays messages automatically via subscribe events — render after settling
   setTimeout(()=>{ messages['main'].sort((a,b)=>new Date(a.ts)-new Date(b.ts)); renderMessages(); }, 1200);
 
   // Backfill: load ALL messages since today's local midnight via History API.
   // Rewind only delivers up to ~1000; paginated history covers the full day.
   loadTodayHistory(ch, 'main');
+}
+
+function chooseRoom(role) {
+  localStorage.setItem('tc_room', role);
+  myRole = role;
+  document.getElementById('room-screen').classList.remove('visible');
+  subscribeRoomChannels();
+  document.getElementById('app').classList.add('visible');
+  renderChannelNav();
+  showRoom('main');
+}
+
+function switchRoomPrompt() {
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('room-screen').classList.add('visible');
+}
+
+// Oeffnet den/die Zimmer-Kanaele fuer die aktuelle Rolle: Sekretariat sieht
+// U1 UND U2, Zimmer-Personal nur die eigene private Leitung.
+function subscribeRoomChannels() {
+  const roomsToOpen = myRole === 'sekretariat' ? ['u1', 'u2'] : [myRole];
+  roomsToOpen.forEach(openRoomChannel);
+}
+
+function openRoomChannel(roomId) {
+  const ch = ably.channels.get(ablyRoomId(roomId));
+  loadHistory(ch, roomId, () => { if (activeRoom === roomId) renderMessages(); });
+  ch.subscribe('msg',        e=>onMessage(roomId,e.data));
+  ch.subscribe('reaction',   e=>onReaction(roomId,e.data));
+  ch.subscribe('delete_msg', e=>onDeleteMsg(roomId,e.data));
+
+  const chTyping = ably.channels.get(ablyRoomId(roomId) + '_typing');
+  chTyping.subscribe('typing', e=>onTypingEvent(roomId,e.data));
 }
 
 // Paginated history fetch back to today's local midnight, deduped into messages[roomId]
@@ -1194,22 +1283,44 @@ function renderSidebar() {
 }
 
 // --- Room ---------------------------------------------------------------------
-function showMainChannel() {
+// Baut die Kanal-Sidebar rollenabhaengig: Sekretariat sieht Hauptkanal+U1+U2,
+// Zimmer-Personal sieht Hauptkanal + die eigene private Leitung.
+function navItemHtml(key) {
+  const meta = ROOM_META[key];
+  return `<div class="sidebar-item${activeRoom===key?' active':''}" id="${meta.navId}" onclick="showRoom('${key}')">
+      <span style="font-size:16px">${meta.icon}</span>
+      <span class="item-name">${roomTitle(key)}</span>
+      <span class="unread-badge" id="${meta.unreadId}" style="display:none"></span>
+    </div>`;
+}
+function renderChannelNav() {
+  const nav = document.getElementById('channel-nav');
+  if (!nav) return;
+  let keys = ['main'];
+  if (myRole === 'sekretariat') keys.push('u1', 'u2');
+  else if (myRole === 'u1' || myRole === 'u2') keys.push(myRole);
+  nav.innerHTML = keys.map(navItemHtml).join('');
+}
+
+function showRoom(key) {
   closeSidebar();
-  activeRoom='main';
-  unread['main']=0;
-  document.getElementById('main-unread').style.display='none';
-  document.getElementById('main-channel-item').classList.add('active');
-  document.getElementById('register-item').classList.remove('active');
-  document.getElementById('room-icon').textContent='🗂️';
-  document.getElementById('room-title').textContent='Sekretariat';
-  document.getElementById('room-sub').textContent='Interner Kanal';
+  activeRoom = key;
+  unread[key] = 0;
+  const meta = ROOM_META[key];
+  const badgeEl = document.getElementById(meta.unreadId);
+  if (badgeEl) badgeEl.style.display = 'none';
+  document.querySelectorAll('#channel-nav .sidebar-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(meta.navId)?.classList.add('active');
+  document.getElementById('room-icon').textContent = meta.icon;
+  document.getElementById('room-title').textContent = roomTitle(key);
+  document.getElementById('room-sub').textContent = roomSub(key);
   document.getElementById('messages').style.display='';
   document.getElementById('register-view').style.display='none';
   document.getElementById('typing-bar').style.display='';
   document.getElementById('input-area-wrap').style.display='';
   renderSidebar(); renderMessages(); scrollBottom();
 }
+function showMainChannel() { showRoom('main'); }
 
 function showRegister() {
   closeSidebar();
@@ -1261,7 +1372,11 @@ function renderRegister() {
 function scrollToMembers() { document.getElementById('members-list').scrollIntoView({behavior:'smooth'}); }
 
 // --- Messages ----------------------------------------------------------------
-function ablyRoomId(rid) { return rid==='main' ? mainAblyId() : rid; }
+function ablyRoomId(rid) {
+  if (rid === 'main') return mainAblyId();
+  if (rid === 'u1' || rid === 'u2') return CHANNEL_ID + ':' + rid;
+  return rid;
+}
 
 function sendMessage() {
   const inp=document.getElementById('msg-input');
@@ -1426,9 +1541,9 @@ function onMessage(roomId, msg) {
     appendMsgEl(msg); scrollBottom();
   } else {
     unread[roomId]=(unread[roomId]||0)+1;
-    if(roomId==='main'){
-      const b=document.getElementById('main-unread'); b.style.display=''; b.textContent=unread['main'];
-    }
+    const unreadId = ROOM_META[roomId]?.unreadId;
+    const b = unreadId && document.getElementById(unreadId);
+    if (b) { b.style.display=''; b.textContent=unread[roomId]; }
     renderSidebar();
     showNotif(msg, roomId);
   }
@@ -1437,20 +1552,18 @@ function onMessage(roomId, msg) {
 }
 
 function deleteMsg(msgId) {
-  const msgs = messages['main'] || [];
+  const msgs = messages[activeRoom] || [];
   const msg = msgs.find(m => m.id === msgId);
   if (!msg || msg.userId !== me.id) return;
   if (!confirm('Nachricht löschen?')) return;
-  ably.channels.get(mainAblyId()).publish('delete_msg', { msgId });
+  ably.channels.get(ablyRoomId(activeRoom)).publish('delete_msg', { msgId });
 }
 
-function onDeleteMsg({ msgId }) {
-  ['main'].forEach(room => {
-    if (messages[room]) {
-      messages[room] = messages[room].filter(m => m.id !== msgId);
-    }
-  });
-  if (activeRoom === 'main') renderMessages();
+function onDeleteMsg(roomId, { msgId }) {
+  if (messages[roomId]) {
+    messages[roomId] = messages[roomId].filter(m => m.id !== msgId);
+  }
+  if (activeRoom === roomId) renderMessages();
 }
 
 function renderMessages() {
@@ -1458,8 +1571,8 @@ function renderMessages() {
   const msgs=messages[activeRoom]||[];
   if(msgs.length===0){
     el.innerHTML=`<div class="empty-chat">
-      <div class="empty-icon">${activeRoom==='main'?'🗂️':'💬'}</div>
-      <div class="empty-title">${'#Sekretariat'}</div>
+      <div class="empty-icon">${ROOM_META[activeRoom]?.icon || '💬'}</div>
+      <div class="empty-title">${'#' + roomTitle(activeRoom)}</div>
       <div class="empty-sub">Schreibe die erste Nachricht!</div></div>`;
     return;
   }

@@ -1097,44 +1097,11 @@ function onConnected() {
     }
   })();
 
-  // ── Ping system: broadcast own info + ask others to respond ──
-  ch.subscribe('ping', e => {
-    if (e.data.id === me.id) return;
-    addMember(e.data);
-    renderSidebar();
-    ch.publish('pong', {id:me.id, name:me.name, avatar:me.avatar, color:me.color});
-  });
-  ch.subscribe('pong', e => {
-    if (e.data.id === me.id) return;
-    addMember(e.data);
-    renderSidebar();
-  });
-
-  // Heartbeat every 10s — so others know we're alive
-  setInterval(()=>{
-    ch.publish('pong', {id:me.id, name:me.name, avatar:me.avatar, color:me.color});
-  }, 10*1000);
-
-  // Watchdog: remove members not seen for >30s, checks every 10s
-  setInterval(()=>{
-    const cutoff = Date.now() - 30*1000;
-    let changed = false;
-    Object.values(members).forEach(m => {
-      if (m.online && m.lastSeen && m.lastSeen < cutoff) {
-        m.online = false;
-        changed = true;
-      }
-    });
-    if (changed) renderSidebar();
-  }, 10*1000);
-
-  // Announce ourselves after connecting
-  setTimeout(()=>{
-    ch.publish('ping', {id:me.id, name:me.name, avatar:me.avatar, color:me.color});
-  }, 500);
-  setTimeout(()=>{
-    ch.publish('ping', {id:me.id, name:me.name, avatar:me.avatar, color:me.color});
-  }, 3000);
+  // Kein eigenes Ping/Pong-Heartbeat mehr (frueher alle 10s pro Person auf dem
+  // Hauptkanal publiziert — teurer Hauptverbraucher des Ably-Nachrichtenkontingents).
+  // Ably-Presence liefert online/offline bereits live (enter/leave/update oben)
+  // plus periodisches syncPresence() alle 30s als autoritativer Abgleich — das
+  // reicht, "lastSeen" wird darueber ebenfalls aktuell gehalten (siehe addMember()).
 
   document.getElementById('setup-screen').style.display='none';
   requestNotifPermission();

@@ -1,70 +1,39 @@
-# Sekretariat-Chat – Einbettung auf augenzentrum-suhr.ch
+# AZS Intern – Team-Chat
 
-## Hosting
+Interner Team-Chat der Praxis, realtime über [Ably](https://ably.com/), als
+statische Single-Page-App (`index.html`) gehostet über GitHub Pages:
 
-Das Widget wird **nicht** über Firebase Hosting ausgeliefert, sondern
-über GitHub Pages unter:
+- https://infoazsuhr.github.io/sekretariat-chat/
 
-- Widget (Iframe-Inhalt): https://infoazsuhr.github.io/sekretariat-chat/
-- Embed-Skript:           https://infoazsuhr.github.io/sekretariat-chat/embed.js
+**Dieses Repo ist aktuell öffentlich, obwohl die App intern ist.** Zugriffsschutz
+läuft ausschliesslich über einen manuell eingegebenen Ably-API-Key (wird lokal
+im Browser gespeichert, steht nicht im Quellcode) — es gibt keine Benutzer-Logins.
 
-Diese Dateien im Verzeichnis `public/widget/` sind die **Quellen**.
-Beim Deploy ins GitHub-Repo `infoazsuhr/sekretariat-chat`:
+## Funktionen
 
-1. Repo klonen
-2. Inhalte kopieren:
-   - `public/widget/sekretariat-chat.html` → `index.html` (im Repo-Root)
-   - `public/widget/embed.js`              → `embed.js`
-3. Auf `main` pushen — GitHub Pages liefert das ab `infoazsuhr.github.io/sekretariat-chat/`.
-4. In den Repo-Settings → Pages: Source = `main` Branch, Folder = `/ (root)`.
+- Ein gemeinsamer Hauptkanal (`#Sekretariat`) für alle
+- Private, isolierte Kanäle **U1** und **U2** zwischen Untersuchungszimmer und
+  Sekretariat (Nachrichten aus U1 sind für U2 nicht sichtbar und umgekehrt) —
+  Rolle wird einmalig nach dem Verbinden gewählt, per Geräte-`localStorage`
+  gemerkt, über "Zimmer wechseln" änderbar
+- Auftragsregister (Task-Karten mit Status pending/confirmed/done)
+- @-Mentions, Datei-Anhänge, Emoji-Reaktionen, Browser-Benachrichtigungen
 
-> Hinweis: das Widget greift direkt per Firebase-Web-SDK auf das
-> Firestore-Projekt `azsdb-999d6` zu — kein eigener Server nötig.
-> Die hardcodeten Firebase-Keys sind Public Web Keys (kein Geheimnis),
-> Schutz erfolgt über Firestore-Rules.
+## Hosting / Deploy
 
-## Einbettung in WordPress (augenzentrum-suhr.ch)
+Kein Build-Schritt — einfach auf `main` pushen, GitHub Pages liefert direkt
+aus dem Repo-Root (`index.html`). Voraussetzung: Repo-Settings → Pages →
+Source = `main` Branch, Folder = `/ (root)`.
 
-Plugin „WPCode" oder „Insert Headers and Footers" verwenden.
-Im Footer-Bereich (gilt für alle Seiten) folgendes einfügen:
+## Wichtig: kein öffentliches Embed mehr
 
-```html
-<script src="https://infoazsuhr.github.io/sekretariat-chat/embed.js" defer></script>
-```
+Frühere Versionen dieses Repos hosteten zusätzlich ein Website-Besucher-Chat-
+Widget (`embed.js`, per `<script>`-Tag auf augenzentrum-suhr.ch eingebunden,
+Firebase/Firestore-Backend). Dieses Widget existiert hier **nicht mehr** —
+`index.html` ist seit dem Umbau auf den internen Ably-Chat der interne Team-
+Chat, nicht mehr das Besucher-Widget. `embed.js` wurde entfernt, weil es bei
+erneuter Einbindung auf der Website ein Iframe mit dem **internen** Chat
+(inkl. Login-Bildschirm) öffentlich sichtbar gemacht hätte.
 
-Das Skript erzeugt unten rechts einen runden Chat-Button.
-Beim Klick öffnet sich das Iframe-Popup (mobil: Vollbild).
-
-## Einmalige Firebase-Einstellungen
-
-Vor dem ersten produktiven Einsatz im Firebase-Console:
-
-1. **Anonyme Authentifizierung aktivieren**
-   Authentication → Sign-in method → „Anonym" aktivieren.
-
-2. **Autorisierte Domain hinzufügen** (kritisch!)
-   Authentication → Settings → Authorized domains → hinzufügen:
-   - `infoazsuhr.github.io`
-
-   Ohne diesen Eintrag schlägt `signInAnonymously()` aus dem Iframe fehl.
-
-3. **Firestore-Rules deployen**
-   ```
-   firebase deploy --only firestore:rules --project azsdb-999d6
-   ```
-
-## Öffnungszeiten
-
-Hardcoded im Widget: **Mo–Fr 09:00–17:00** (Europe/Zurich).
-Ausserhalb wird der Chat geschlossen mit Hinweis auf Telefon + Notfallnummer.
-
-Zum Ändern: `index.html` im GitHub-Repo, Funktion `isOpenNow()`.
-
-## Datenschutz
-
-- Besucher müssen vor dem ersten Schreiben die Hinweise bestätigen
-  („keine Gesundheitsdaten, keine medizinischen Auskünfte").
-- Konversations-ID = anonyme Firebase-UID, im Browser des Besuchers
-  via Session gespeichert. Nach Cookie-Löschung beginnt ein neuer Chat.
-- Andere Besucher sehen weder die Liste noch Inhalte fremder Chats
-  (Firestore-Rules erzwingen `visitorUid == request.auth.uid`).
+Falls ein Website-Chat für Besucher wieder gebraucht wird, braucht das ein
+eigenes, neues Widget/Repo — nicht dieses hier wiederverwenden.
